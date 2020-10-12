@@ -16,12 +16,12 @@ def handler_index_document_file(sender, **kwargs):
 
 
 def handler_initialize_new_ocr_settings(sender, instance, **kwargs):
-    DocumentTypeSettings = apps.get_model(
-        app_label='ocr', model_name='DocumentTypeSettings'
+    DocumentTypeOCRSettings = apps.get_model(
+        app_label='ocr', model_name='DocumentTypeOCRSettings'
     )
 
     if kwargs['created']:
-        DocumentTypeSettings.objects.create(
+        DocumentTypeOCRSettings.objects.create(
             document_type=instance, auto_ocr=setting_auto_ocr.value
         )
 
