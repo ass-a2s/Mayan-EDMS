@@ -3,6 +3,11 @@
 - Update Django from version 2.2.15 to 2.2.16.
 - Increase GitLab CI artifact expiration to 2 hours.
 - Seed the random number generator when the test case class is initialized.
+- Passthrough storage improvements. Zip file is opened with the modes
+  corresponding to the calling storage. New file object methods added:
+  tell, write, flush, seek. Empty files when using the `.save()` method
+  are now only created if they don't already exists. Add support to the
+  encryption storage to accept unicode content.
 
 3.4.17 (2020-09-10)
 ===================
