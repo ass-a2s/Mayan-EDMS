@@ -196,6 +196,28 @@ def task_document_version_page_list_reset(document_version_id):
     document_version.pages_reset()
 
 
+@app.task(ignore_result=True)
+def task_document_version_export(document_version_id):
+    DownloadFile = apps.get_model(
+        app_label='storage', model_name='DownloadFile'
+    )
+    DocumentVersion = apps.get_model(
+        app_label='documents', model_name='DocumentVersion'
+    )
+
+    document_version = DocumentVersion.objects.get(
+        pk=document_version_id
+    )
+
+    download_file = DownloadFile.objects.create(
+        content_object=document_version,
+        filename=str(document_version),
+    )
+
+    with download_file.open(mode='wb+') as file_object:
+        document_version.export(file_object=file_object)
+
+
 # Document version page
 
 @app.task(
