@@ -5,7 +5,7 @@ from django.utils.module_loading import import_string
 
 from mayan.apps.converter.classes import Layer
 
-from ...literals import DOCUMENT_FILE_ACTION_PAGES_NEW
+from ...literals import DOCUMENT_FILE_ACTION_PAGES_NEW, PAGE_RANGE_ALL
 from ...models import Document, DocumentType
 from ...search import document_file_page_search, document_search
 
@@ -16,14 +16,14 @@ from ..literals import (
 
 
 class DocumentAPIViewTestMixin:
-    def _request_test_document_api_download_view(self):
+    def _request_test_document_download_api_view(self):
         return self.get(
             viewname='rest_api:document-download', kwargs={
-                'pk': self.test_document.pk
+                'document_id': self.test_document.pk
             }
         )
 
-    def _request_test_document_api_upload_view(self):
+    def _request_test_document_upload_api_view(self):
         with open(file=TEST_DOCUMENT_PATH, mode='rb') as file_object:
             return self.post(
                 viewname='rest_api:document-list', data={
@@ -32,24 +32,24 @@ class DocumentAPIViewTestMixin:
                 }
             )
 
-    def _request_test_document_description_api_edit_via_patch_view(self):
+    def _request_test_document_description_edit_via_patch_api_view(self):
         return self.patch(
             viewname='rest_api:document-detail', kwargs={
-                'pk': self.test_document.pk
+                'document_id': self.test_document.pk
             }, data={'description': TEST_DOCUMENT_DESCRIPTION_EDITED}
         )
 
-    def _request_test_document_description_api_edit_via_put_view(self):
+    def _request_test_document_description_edit_via_put_api_view(self):
         return self.put(
             viewname='rest_api:document-detail', kwargs={
-                'pk': self.test_document.pk
+                'document_id': self.test_document.pk
             }, data={'description': TEST_DOCUMENT_DESCRIPTION_EDITED}
         )
 
-    def _request_test_document_document_type_change_api_view(self):
+    def _request_test_document_type_change_api_view(self):
         return self.post(
             viewname='rest_api:document-type-change', kwargs={
-                'pk': self.test_document.pk
+                'document_id': self.test_document.pk
             }, data={'new_document_type': self.test_document_type_2.pk}
         )
 
@@ -78,6 +78,7 @@ class DocumentTestMixin:
     test_document_file_filename = TEST_SMALL_DOCUMENT_FILENAME
     test_document_file_path = None
     test_document_filename = TEST_SMALL_DOCUMENT_FILENAME
+    test_document_language = None
     test_document_path = None
 
     def setUp(self):
@@ -95,7 +96,7 @@ class DocumentTestMixin:
     def tearDown(self):
         for document_type in DocumentType.objects.all():
             document_type.delete()
-        super(DocumentTestMixin, self).tearDown()
+        super().tearDown()
 
     def _create_test_document_stub(self):
         self.test_document_stub = Document.objects.create(
@@ -128,15 +129,16 @@ class DocumentTestMixin:
             label = self.test_document_filename
 
         with open(file=self.test_document_path, mode='rb') as file_object:
-            document = self.test_document_type.new_document(
-                file_object=file_object, label=label, _user=_user
+            document, document_file = self.test_document_type.new_document(
+                file_object=file_object, label=label,
+                language=self.test_document_language, _user=_user
             )
 
         self.test_document = document
         self.test_documents.append(document)
 
-        self.test_document_file_page = document.latest_file.pages.first()
-        self.test_document_file = document.latest_file
+        self.test_document_file_page = document_file.pages.first()
+        self.test_document_file = document_file
         self.test_document_version = self.test_document.latest_version
 
     def _upload_test_document_file(self, action=None, _user=None):
@@ -155,23 +157,65 @@ class DocumentTestMixin:
 
 
 class DocumentViewTestMixin:
-    def _request_test_document_type_edit_get_view(self):
+    def _request_test_document_list_view(self):
+        return self.get(viewname='documents:document_list')
+
+    def _request_test_document_preview_view(self):
         return self.get(
-            viewname='documents:document_document_type_edit', kwargs={
+            viewname='documents:document_preview', kwargs={
                 'document_id': self.test_document.pk
             }
         )
 
-    def _request_test_document_type_edit_post_view(self, document_type):
+    def _request_test_document_print_form_view(self):
+        return self.get(
+            viewname='documents:document_print_form', kwargs={
+                'document_id': self.test_document.pk,
+            }, data={
+                'page_group': PAGE_RANGE_ALL
+            }
+        )
+
+    def _request_test_document_print_view(self):
+        return self.get(
+            viewname='documents:document_print_view', kwargs={
+                'document_id': self.test_document.pk,
+            }, query={
+                'page_group': PAGE_RANGE_ALL
+            }
+        )
+
+    def _request_test_document_properties_edit_get_view(self):
+        return self.get(
+            viewname='documents:document_properties_edit', kwargs={
+                'document_id': self.test_document.pk
+            }
+        )
+
+    def _request_test_document_properties_view(self):
+        return self.get(
+            viewname='documents:document_properties', kwargs={
+                'document_id': self.test_document.pk
+            }
+        )
+
+    def _request_test_document_type_change_get_view(self):
+        return self.get(
+            viewname='documents:document_type_change', kwargs={
+                'document_id': self.test_document.pk
+            }
+        )
+
+    def _request_test_document_type_change_post_view(self, document_type):
         return self.post(
-            viewname='documents:document_document_type_edit', kwargs={
+            viewname='documents:document_type_change', kwargs={
                 'document_id': self.test_document.pk
             }, data={'document_type': document_type.pk}
         )
 
-    def _request_test_document_multiple_type_edit(self, document_type):
+    def _request_test_document_multiple_type_change(self, document_type):
         return self.post(
-            viewname='documents:document_multiple_document_type_edit',
+            viewname='documents:document_multiple_type_change',
             data={
                 'id_list': self.test_document.pk,
                 'document_type': document_type.pk

@@ -3,7 +3,6 @@ import logging
 from furl import furl
 
 from django.db import models
-from django.db.models import Max
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django.utils.functional import cached_property
@@ -18,7 +17,7 @@ from mayan.apps.converter.transformations import (
 )
 from mayan.apps.lock_manager.backends.base import LockingBackend
 
-from ..managers import DocumentFilePageManager#, ValidDocumentFilePageManager
+from ..managers import DocumentFilePageManager
 from ..settings import (
     setting_display_width, setting_display_height, setting_zoom_max_level,
     setting_zoom_min_level
@@ -133,8 +132,9 @@ class DocumentFilePage(ModelMixinPagedModel, models.Model):
         final_url.args = kwargs
         final_url.path = reverse(
             viewname='rest_api:documentfilepage-image', kwargs={
-                'pk': self.document_file.document_id,
-                'file_pk': self.document_file_id, 'page_pk': self.pk
+                'document_id': self.document_file.document_id,
+                'document_file_id': self.document_file_id,
+                'document_file_page_id': self.pk
             }
         )
         final_url.args['_hash'] = transformations_hash

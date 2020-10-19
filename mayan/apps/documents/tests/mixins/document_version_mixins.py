@@ -1,9 +1,71 @@
 from mayan.apps.converter.layers import layer_saved_transformations
 
+from ...literals import PAGE_RANGE_ALL
+
 from ..literals import (
     TEST_DOCUMENT_VERSION_COMMENT_EDITED, TEST_TRANSFORMATION_ARGUMENT,
     TEST_TRANSFORMATION_CLASS
 )
+
+
+class DocumentVersionAPIViewTestMixin:
+    def _request_test_document_version_create_api_view(self):
+        return self.post(
+            viewname='rest_api:documentversion-list', kwargs={
+                'document_id': self.test_document.pk
+            }
+        )
+
+    def _request_test_document_version_delete_api_view(self):
+        return self.delete(
+            viewname='rest_api:documentversion-detail', kwargs={
+                'document_id': self.test_document.pk,
+                'document_version_id': self.test_document.latest_version.pk
+            }
+        )
+
+    def _request_test_document_version_edit_via_patch_api_view(self):
+        return self.patch(
+            viewname='rest_api:documentversion-detail', kwargs={
+                'document_id': self.test_document.pk,
+                'document_version_id': self.test_document.latest_version.pk
+            }, data={'comment': TEST_DOCUMENT_VERSION_COMMENT_EDITED}
+        )
+
+    def _request_test_document_version_edit_via_put_api_view(self):
+        return self.put(
+            viewname='rest_api:documentversion-detail', kwargs={
+                'document_id': self.test_document.pk,
+                'document_version_id': self.test_document.latest_version.pk
+            }, data={'comment': TEST_DOCUMENT_VERSION_COMMENT_EDITED}
+        )
+
+    def _request_test_document_version_export_api_view(self):
+        return self.post(
+            viewname='rest_api:documentversion-export', kwargs={
+                'document_id': self.test_document.pk,
+                'document_version_id': self.test_document.latest_version.pk,
+            }
+        )
+
+    def _request_test_document_version_list_api_view(self):
+        return self.get(
+            viewname='rest_api:documentversion-list', kwargs={
+                'document_id': self.test_document.pk
+            }
+        )
+
+
+class DocumentVersionPageAPIViewTestMixin:
+    def _request_test_document_version_page_image_api_view(self):
+        page = self.test_document.pages.first()
+        return self.get(
+            viewname='rest_api:documentversionpage-image', kwargs={
+                'document_id': page.document_version.document_id,
+                'document_version_id': page.document_version_id,
+                'document_version_page_id': page.pk
+            }
+        )
 
 
 class DocumentVersionTestMixin:
@@ -57,6 +119,25 @@ class DocumentVersionViewTestMixin:
         return self.get(
             viewname='documents:document_version_preview', kwargs={
                 'document_version_id': self.test_document_version.pk
+            }
+        )
+
+
+    def _request_test_document_version_print_form_view(self):
+        return self.get(
+            viewname='documents:document_version_print_form', kwargs={
+                'document_version_id': self.test_document_version.pk,
+            }, data={
+                'page_group': PAGE_RANGE_ALL
+            }
+        )
+
+    def _request_test_document_version_print_view(self):
+        return self.get(
+            viewname='documents:document_version_print_view', kwargs={
+                'document_version_id': self.test_document_version.pk,
+            }, query={
+                'page_group': PAGE_RANGE_ALL
             }
         )
 

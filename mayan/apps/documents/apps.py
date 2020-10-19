@@ -7,7 +7,7 @@ from mayan.apps.acls.permissions import permission_acl_edit, permission_acl_view
 from mayan.apps.common.apps import MayanAppConfig
 from mayan.apps.common.classes import (
     MissingItem, ModelCopy, ModelField, ModelFieldRelated, ModelProperty,
-    ModelQueryFields, Template
+    ModelQueryFields
 )
 from mayan.apps.common.menus import (
     menu_facet, menu_list_facet, menu_main, menu_object, menu_related,
@@ -15,13 +15,13 @@ from mayan.apps.common.menus import (
 )
 from mayan.apps.common.signals import signal_post_initial_setup
 from mayan.apps.converter.layers import layer_decorations
-from mayan.apps.dashboards.dashboards import dashboard_main
 from mayan.apps.converter.links import link_transformation_list
 from mayan.apps.converter.permissions import (
     permission_transformation_create,
     permission_transformation_delete, permission_transformation_edit,
     permission_transformation_view,
 )
+from mayan.apps.dashboards.dashboards import dashboard_main
 from mayan.apps.events.classes import EventModelRegistry, ModelEventType
 from mayan.apps.events.links import (
     link_events_for_object, link_object_event_types_user_subcriptions_list,
@@ -29,9 +29,10 @@ from mayan.apps.events.links import (
 from mayan.apps.events.permissions import permission_events_view
 from mayan.apps.navigation.classes import SourceColumn
 from mayan.apps.rest_api.fields import DynamicSerializerField
+from mayan.apps.templating.classes import AJAXTemplate
 from mayan.apps.views.html_widgets import TwoStateWidget
-from .classes import *
 
+from .classes import *
 from .dashboard_widgets import (
     DashboardWidgetDocumentFilePagesTotal, DashboardWidgetDocumentsInTrash,
     DashboardWidgetDocumentsNewThisMonth,
@@ -54,19 +55,19 @@ from .handlers import (
 )
 from .links.document_links import (
     link_document_clear_transformations, link_document_clone_transformations,
-    link_document_document_type_edit,
-    link_document_edit, link_document_list, link_document_list_recent_access,
+    link_document_type_change,
+    link_document_properties_edit, link_document_list, link_document_list_recent_access,
     link_document_list_recent_added,
     link_document_multiple_clear_transformations,
-    link_document_multiple_document_type_edit, link_document_preview,
-    link_document_print, link_document_properties
+    link_document_multiple_type_change, link_document_preview,
+    link_document_properties
 )
 from .links.document_file_links import (
     link_document_file_delete, link_document_file_download,
     link_document_file_multiple_download, link_document_file_download_quick,
     link_document_file_list, link_document_file_preview,
-    link_document_file_properties, link_document_file_return_to_document,
-    link_document_file_return_list
+    link_document_file_print_form, link_document_file_properties,
+    link_document_file_return_to_document, link_document_file_return_list
 )
 from .links.document_file_page_links import (
     link_document_file_multiple_page_count_update,
@@ -94,11 +95,11 @@ from .links.document_version_links import (
     link_document_version_edit, link_document_version_export,
     link_document_version_list, link_document_version_multiple_delete,
     link_document_version_return_list,
-    link_document_version_return_to_document, link_document_version_preview
+    link_document_version_return_to_document, link_document_version_preview,
+    link_document_version_print_form
 )
 from .links.document_version_page_links import (
-    link_document_version_page_delete,
-    link_document_version_page_list,
+    link_document_version_page_delete, link_document_version_page_list,
     link_document_version_page_list_remap,
     link_document_version_page_list_reset,
     link_document_version_page_navigation_first,
@@ -109,8 +110,8 @@ from .links.document_version_page_links import (
     link_document_version_page_return_to_document_version,
     link_document_version_page_rotate_left,
     link_document_version_page_rotate_right, link_document_version_page_view,
-    link_document_version_page_view_reset, link_document_version_page_zoom_in,
-    link_document_version_page_zoom_out
+    link_document_version_page_view_reset,
+    link_document_version_page_zoom_in, link_document_version_page_zoom_out
 )
 from .links.duplicated_document_links import (
     link_document_duplicates_list, link_duplicated_document_list,
@@ -129,19 +130,44 @@ from .links.trashed_document_links import (
 )
 
 from .menus import menu_documents
+
+# Documents
+
 from .permissions import (
-    permission_document_create, permission_trashed_document_delete,
-    permission_document_edit, permission_document_file_delete,
-    permission_document_file_download, permission_document_file_new,
-    permission_document_file_tools, permission_document_file_view,
-    permission_document_print, permission_document_properties_edit,
-    permission_trashed_document_restore, permission_document_tools,
-    permission_document_trash, permission_document_type_delete,
-    permission_document_type_edit, permission_document_type_view,
+    permission_document_create, permission_document_edit,
+    permission_document_properties_edit, permission_document_tools,
+    permission_document_trash, permission_document_view
+)
+
+# DocumentFile
+
+from .permissions import (
+    permission_document_file_delete, permission_document_file_download,
+    permission_document_file_new, permission_document_file_print,
+    permission_document_file_tools, permission_document_file_view
+)
+
+# DocumentType
+
+from .permissions import (
+    permission_document_type_delete, permission_document_type_edit,
+    permission_document_type_view
+)
+
+# DocumentVersion
+
+from .permissions import (
     permission_document_version_create, permission_document_version_delete,
     permission_document_version_edit, permission_document_version_export,
-    permission_document_version_view, permission_document_view
+    permission_document_version_print, permission_document_version_view
 )
+
+# TrashedDocument
+
+from .permissions import (
+    permission_trashed_document_delete, permission_trashed_document_restore
+)
+
 from .signals import signal_post_document_file_upload
 from .statistics import *  # NOQA
 from .widgets import (
@@ -173,6 +199,11 @@ class DocumentsApp(MayanAppConfig):
         DocumentVersionPage = self.get_model(model_name='DocumentVersionPage')
         DuplicatedDocument = self.get_model(model_name='DuplicatedDocument')
 
+        AJAXTemplate(
+            name='invalid_document',
+            template_name='documents/invalid_document.html'
+        )
+
         link_decorations_list = link_transformation_list.copy(
             layer=layer_decorations
         )
@@ -180,7 +211,7 @@ class DocumentsApp(MayanAppConfig):
 
         DynamicSerializerField.add_serializer(
             klass=Document,
-            serializer_class='mayan.apps.documents.serializers.DocumentSerializer'
+            serializer_class='mayan.apps.documents.serializers.document_serializers.DocumentSerializer'
         )
 
         EventModelRegistry.register(model=DeletedDocument)
@@ -313,7 +344,7 @@ class DocumentsApp(MayanAppConfig):
             model=Document, permissions=(
                 permission_acl_edit, permission_acl_view,
                 permission_trashed_document_delete, permission_document_edit,
-                permission_document_file_new, permission_document_print,
+                permission_document_file_new,
                 permission_document_properties_edit,
                 permission_trashed_document_restore, permission_document_tools,
                 permission_document_trash, permission_document_view,
@@ -329,6 +360,7 @@ class DocumentsApp(MayanAppConfig):
                 permission_acl_edit, permission_acl_view,
                 permission_document_file_delete,
                 permission_document_file_download,
+                permission_document_file_print,
                 permission_document_file_tools,
                 permission_document_file_view,
                 permission_events_view, permission_transformation_create,
@@ -351,6 +383,7 @@ class DocumentsApp(MayanAppConfig):
                 permission_document_version_delete,
                 permission_document_version_edit,
                 permission_document_version_export,
+                permission_document_version_print,
                 permission_document_version_view,
                 permission_events_view, permission_transformation_create,
                 permission_transformation_delete,
@@ -602,11 +635,6 @@ class DocumentsApp(MayanAppConfig):
             source=DeletedDocument
         )
 
-        Template(
-            name='invalid_document',
-            template_name='documents/invalid_document.html'
-        )
-
         dashboard_main.add_widget(
             widget=DashboardWidgetDocumentsTotal, order=0
         )
@@ -665,10 +693,9 @@ class DocumentsApp(MayanAppConfig):
         menu_object.bind_links(
             links=(
                 link_document_favorites_add, link_document_favorites_remove,
-                link_document_edit, link_document_document_type_edit,
-                link_document_print, link_document_trash,
-                link_document_clear_transformations,
-                link_document_clone_transformations,
+                link_document_properties_edit, link_document_type_change,
+                link_document_trash, link_document_clear_transformations,
+                link_document_clone_transformations
             ), sources=(Document,)
         )
 
@@ -678,7 +705,7 @@ class DocumentsApp(MayanAppConfig):
                 link_document_multiple_favorites_remove,
                 link_document_multiple_clear_transformations,
                 link_document_multiple_trash,
-                link_document_multiple_document_type_edit,
+                link_document_multiple_type_change
             ), sources=(Document,)
         )
 
@@ -711,7 +738,8 @@ class DocumentsApp(MayanAppConfig):
                 link_document_file_delete,
                 #link_document_file_download,
                 link_document_file_download_quick,
-                link_document_file_page_count_update
+                link_document_file_page_count_update,
+                link_document_file_print_form
             ),
             sources=(DocumentFile,)
         )
@@ -817,7 +845,8 @@ class DocumentsApp(MayanAppConfig):
                 link_document_version_delete, link_document_version_edit,
                 link_document_version_export,
                 link_document_version_page_list_remap,
-                link_document_version_page_list_reset
+                link_document_version_page_list_reset,
+                link_document_version_print_form
             ),
             sources=(DocumentVersion,)
         )

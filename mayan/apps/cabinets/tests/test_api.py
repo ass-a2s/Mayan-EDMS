@@ -3,7 +3,7 @@ from django.utils.encoding import force_text
 from rest_framework import status
 
 from mayan.apps.documents.permissions import permission_document_view
-from mayan.apps.documents.tests.mixins import DocumentTestMixin
+from mayan.apps.documents.tests.mixins.document_mixins import DocumentTestMixin
 from mayan.apps.rest_api.tests.base import BaseAPITestCase
 
 from ..models import Cabinet
@@ -41,7 +41,7 @@ class CabinetAPITestCase(
 
         self.assertEqual(Cabinet.objects.count(), 1)
 
-    def test_cabinet_delete_api_view_no_permssions(self):
+    def test_cabinet_delete_api_view_no_permissions(self):
         self._create_test_cabinet()
 
         cabinet_count = Cabinet.objects.count()
