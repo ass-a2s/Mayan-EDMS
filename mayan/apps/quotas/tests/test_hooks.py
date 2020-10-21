@@ -24,7 +24,7 @@ class QuotaHooksTestCase(
     auto_upload_test_document = False
 
     def setUp(self):
-        super(QuotaHooksTestCase, self).setUp()
+        super().setUp()
         # Increase the initial usage count to 1 by uploading a document
         # as the test case user.
         self._upload_test_document(_user=self._test_case_user)
@@ -34,7 +34,7 @@ class QuotaHooksTestCase(
 
     def tearDown(self):
         QuotaBackend.connect_signals()
-        super(QuotaHooksTestCase, self).tearDown()
+        super().tearDown()
 
     def test_document_quantity_quota_and_source_upload_wizard_view_with_permission(self):
         self.test_quota_backend = DocumentCountQuota
