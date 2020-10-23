@@ -210,7 +210,12 @@ class Document(ModelInstanceExtraDataAPIViewMixin, ModelMixinHooks, models.Model
 
     @property
     def latest_version(self):
-        return self.versions.order_by('timestamp').last()
+        try:
+            return self.versions.filter(active=True).first()
+        except self.versions.model.DoesNotExist:
+            return self.versions.none()
+
+        #return self.versions.order_by('timestamp').last()
 
     def natural_key(self):
         return (self.uuid,)

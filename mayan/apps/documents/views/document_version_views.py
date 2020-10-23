@@ -11,8 +11,8 @@ from mayan.apps.converter.permissions import (
 )
 from mayan.apps.file_caching.tasks import task_cache_partition_purge
 from mayan.apps.views.generics import (
-    FormView, MultipleObjectConfirmActionView, MultipleObjectDeleteView,
-    SingleObjectCreateView, SingleObjectDetailView,
+    ConfirmView, FormView, MultipleObjectConfirmActionView,
+    MultipleObjectDeleteView, SingleObjectCreateView, SingleObjectDetailView,
     SingleObjectEditView, SingleObjectListView
 )
 from mayan.apps.views.mixins import ExternalObjectMixin
@@ -77,6 +77,25 @@ class DocumentVersionCachePartitionPurgeView(MultipleObjectConfirmActionView):
                     #'user_id': self.request.user.pk
                 }
             )
+
+
+class DocumentVersionActiveView(ExternalObjectMixin, ConfirmView):
+    external_object_class = DocumentVersion
+    external_object_permission = permission_document_version_edit
+    external_object_pk_url_kwarg = 'document_version_id'
+    #TODO Add message
+    #TODO Add redirect
+
+    def get_extra_context(self):
+        return {
+            'object': self.external_object,
+            'title': _(
+                'Make the document version "%s" the active version?'
+            ) % self.external_object,
+        }
+
+    def view_action(self, form=None):
+        self.external_object.active_set()
 
 
 class DocumentVersionCreateView(ExternalObjectMixin, SingleObjectCreateView):

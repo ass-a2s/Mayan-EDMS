@@ -2,7 +2,7 @@ import logging
 import os
 
 from django.apps import apps
-from django.db import models
+from django.db import models, transaction
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
@@ -41,6 +41,11 @@ class DocumentVersion(ModelInstanceExtraDataAPIViewMixin, models.Model):
         blank=True, default='', help_text=_(
             'An optional short text describing the document version.'
         ), verbose_name=_('Comment')
+    )
+    active = models.BooleanField(
+        default=True, help_text=_(
+            'Determines the active version of the document.'
+        ), verbose_name=_('Active')
     )
 
     class Meta:
@@ -210,8 +215,21 @@ class DocumentVersion(ModelInstanceExtraDataAPIViewMixin, models.Model):
             'target': 'self',
         }
     )
+
+    def active_set(self, save=True):
+        with transaction.atomic():
+            self.document.versions.update(active=False)
+            self.active = True
+
+            if save:
+                return self.save()
+
     def save(self, *args, **kwargs):
-        return super().save(*args, **kwargs)
+        with transaction.atomic():
+            if self.active:
+                self.active_set(save=False)
+
+            return super().save(*args, **kwargs)
 
     '''
     def save(self, *args, **kwargs):
