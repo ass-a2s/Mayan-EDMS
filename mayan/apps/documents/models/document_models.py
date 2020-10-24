@@ -212,7 +212,9 @@ class Document(ModelInstanceExtraDataAPIViewMixin, ModelMixinHooks, models.Model
         return (self.uuid,)
     natural_key.dependencies = ['documents.DocumentType']
 
-    def new_file(self, file_object, action=None, comment=None, _user=None):
+    def new_file(
+        self, file_object, action=None, comment=None, filename=None, _user=None
+    ):
         logger.info('Creating new document file for document: %s', self)
 
         if not action:
@@ -227,7 +229,8 @@ class Document(ModelInstanceExtraDataAPIViewMixin, ModelMixinHooks, models.Model
         #transaction.atomic
         try:
             document_file = DocumentFile(
-                document=self, comment=comment, file=File(file=file_object)
+                document=self, comment=comment, file=File(file=file_object),
+                filename=filename or str(file_object)
             )
             #document_file = self.files(
             #    comment=comment or '', file=File(file=file_object)
