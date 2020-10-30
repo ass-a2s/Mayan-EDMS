@@ -1,16 +1,20 @@
 import logging
 
 from django.contrib import messages
+from django.http import HttpResponseRedirect, JsonResponse
 from django.template import RequestContext
-from django.urls import reverse_lazy
+from django.urls import reverse, reverse_lazy
 from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.views.generics import (
-    ConfirmView, SingleObjectCreateView, SingleObjectDeleteView,
+    ConfirmView, FormView, SingleObjectCreateView, SingleObjectDeleteView,
+    SingleObjectDynamicFormCreateView, SingleObjectDynamicFormEditView,
     SingleObjectEditView, SingleObjectListView
 )
 from mayan.apps.views.mixins import ExternalObjectMixin
 
+from ..classes import SourceBackend
+from ..forms import SourceBackendSelectionForm, SourceBackendDynamicForm
 from ..icons import icon_setup_sources
 from ..links import (
     link_setup_source_create_imap_email, link_setup_source_create_pop3_email,
@@ -18,7 +22,7 @@ from ..links import (
     link_setup_source_create_watch_folder, link_setup_source_create_webform,
     link_setup_source_create_sane_scanner
 )
-from ..models import Source, StagingFolderSource
+from ..models import Source
 from ..permissions import (
     permission_sources_setup_create, permission_sources_setup_delete,
     permission_sources_setup_edit, permission_sources_setup_view,
@@ -41,7 +45,7 @@ class SourceCheckView(ExternalObjectMixin, ConfirmView):
     """
     external_object_permission = permission_sources_setup_create
     external_object_pk_url_kwarg = 'source_id'
-    external_object_queryset = Source.objects.select_subclasses()
+    external_object_class = Source
 
     def get_extra_context(self):
         return {
@@ -69,6 +73,7 @@ class SourceCheckView(ExternalObjectMixin, ConfirmView):
         )
 
 
+"""
 class SourceCreateView(SingleObjectCreateView):
     post_action_redirect = reverse_lazy(
         viewname='sources:setup_source_list'
@@ -89,29 +94,52 @@ class SourceCreateView(SingleObjectCreateView):
         return get_form_class(
             source_type_name=self.kwargs['source_type_name']
         )
+"""
 
-
-class SourceDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
-    external_object_permission = permission_sources_setup_delete
-    external_object_pk_url_kwarg = 'source_id'
-    external_object_queryset = Source.objects.select_subclasses()
+class SourceDeleteView(SingleObjectDeleteView):
+    model = Source
+    object_permission = permission_sources_setup_delete
+    pk_url_kwarg = 'source_id'
     post_action_redirect = reverse_lazy(
         viewname='sources:setup_source_list'
     )
 
     def get_extra_context(self):
         return {
-            'object': self.get_object(),
-            'title': _('Delete the source: %s?') % self.get_object(),
+            'object': self.object,
+            'title': _('Delete the source: %s?') % self.object,
         }
 
-    def get_form_class(self):
-        return get_form_class(source_type_name=self.get_object().source_type)
+    #def get_form_class(self):
+    #    return get_form_class(source_type_name=self.get_object().source_type)
 
-    def get_object(self):
-        return self.external_object
+    #def get_object(self):
+    #    return self.external_object
 
 
+class SourceEditView(SingleObjectDynamicFormEditView):
+    form_class = SourceBackendDynamicForm
+    model = Source
+    object_permission = permission_sources_setup_edit
+    pk_url_kwarg = 'source_id'
+
+    def get_extra_context(self):
+        return {
+            'title': _('Edit source: %s') % self.object,
+        }
+
+    def get_form_schema(self):
+        backend = self.object.get_backend()
+        result = {
+            'fields': backend.fields,
+            'widgets': getattr(backend, 'widgets', {})
+        }
+        if hasattr(backend, 'field_order'):
+            result['field_order'] = backend.field_order
+
+        return result
+
+'''
 class SourceEditView(ExternalObjectMixin, SingleObjectEditView):
     external_object_permission = permission_sources_setup_edit
     external_object_pk_url_kwarg = 'source_id'
@@ -132,11 +160,12 @@ class SourceEditView(ExternalObjectMixin, SingleObjectEditView):
 
     def get_object(self):
         return self.external_object
-
+'''
 
 class SourceListView(SingleObjectListView):
+    model = Source
     object_permission = permission_sources_setup_view
-    source_queryset = Source.objects.select_subclasses()
+    #source_queryset = Source.objects.select_subclasses()
 
     def get_extra_context(self):
         return {
@@ -174,10 +203,63 @@ class SourceListView(SingleObjectListView):
         }
 
 
+class SourceBackendSelectionView(FormView):
+    extra_context = {
+        'title': _('New source backend selection'),
+    }
+    form_class = SourceBackendSelectionForm
+    view_permission = permission_sources_setup_create
+
+    def form_valid(self, form):
+        backend = form.cleaned_data['backend']
+        return HttpResponseRedirect(
+            redirect_to=reverse(
+                viewname='sources:source_create', kwargs={
+                    'backend_path': backend
+                }
+            )
+        )
+
+
+class SourceCreateView(SingleObjectDynamicFormCreateView):
+    form_class = SourceBackendDynamicForm
+    post_action_redirect = reverse_lazy(viewname='sources:setup_source_list')
+    view_permission = permission_sources_setup_create
+
+    def get_backend(self):
+        try:
+            return SourceBackend.get(name=self.kwargs['backend_path'])
+        except KeyError:
+            raise Http404(
+                '{} class not found'.format(self.kwargs['backend_path'])
+            )
+
+    def get_extra_context(self):
+        return {
+            'title': _(
+                'Create a "%s" source'
+            ) % self.get_backend().label,
+        }
+
+    def get_form_schema(self):
+        backend = self.get_backend()
+        result = {
+            'fields': backend.fields,
+            'widgets': getattr(backend, 'widgets', {})
+        }
+        if hasattr(backend, 'field_order'):
+            result['field_order'] = backend.field_order
+
+        return result
+
+    def get_instance_extra_data(self):
+        return {'backend_path': self.kwargs['backend_path']}
+
+
 class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
-    external_object_class = StagingFolderSource
-    external_object_permission = permission_staging_file_delete
-    external_object_pk_url_kwarg = 'staging_folder_id'
+    object_class = Source
+    object_permission = permission_staging_file_delete
+    pk_url_kwarg = 'staging_folder_id'
 
     def get_extra_context(self):
         return {

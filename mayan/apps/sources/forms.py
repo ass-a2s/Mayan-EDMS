@@ -1,16 +1,20 @@
+import json
 import logging
 
 from django import forms
+from django.db.models import Model
+from django.db.models.query import QuerySet
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext, ugettext_lazy as _
 
 from mayan.apps.documents.forms.document_forms import DocumentForm
 from mayan.apps.documents.literals import DOCUMENT_FILE_ACTION_PAGE_CHOICES
+from mayan.apps.views.forms import DynamicModelForm
 
+from .classes import SourceBackend
 from .models import (
-    IMAPEmail, POP3Email, SaneScanner, StagingFolderSource, WebFormSource,
-    WatchFolderSource
+    IMAPEmail, POP3Email, SaneScanner, Source, StagingFolderSource,
+    WebFormSource, WatchFolderSource
 )
 
 logger = logging.getLogger(name=__name__)
@@ -69,6 +73,67 @@ class StagingUploadForm(UploadBaseForm):
             logger.error('exception: %s', exception)
 
     staging_file_id = forms.ChoiceField(label=_('Staging file'))
+
+
+class SourceBackendSelectionForm(forms.Form):
+    backend = forms.ChoiceField(
+        choices=(), help_text=_('The backend used to create the new source.'),
+        label=_('Backend')
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['backend'].choices = SourceBackend.get_choices()
+
+
+
+class SourceBackendDynamicForm(DynamicModelForm):
+    class Meta:
+        fields = ('label', 'enabled',)#, 'uncompress')
+        model = Source
+        widgets = {'backend_data': forms.widgets.HiddenInput}
+
+    def __init__(self, *args, **kwargs):
+        #self.request = kwargs.pop('request')
+        #self.backend_data = kwargs.pop('backend_data')
+
+        super().__init__(*args, **kwargs)
+        if self.instance.backend_data:
+            backend_data = json.loads(s=self.instance.backend_data)
+            for key in self.instance.get_backend().fields:
+                self.fields[key].initial = backend_data.get(key)
+
+            #for key, value in json.loads(s=self.instance.backend_data).items():
+            #    self.fields[key].initial = value
+
+    def clean(self):
+        data = super().clean()
+
+        # Consolidate the dynamic fields into a single JSON field called
+        # 'backend_data'.
+        backend_data = {}
+
+        for field_name, field_data in self.schema['fields'].items():
+            backend_data[field_name] = data.pop(
+                field_name, field_data.get('default', None)
+            )
+            if isinstance(backend_data[field_name], QuerySet):
+                # Flatten the queryset to a list of ids
+                backend_data[field_name] = list(
+                    backend_data[field_name].values_list('id', flat=True)
+                )
+            elif isinstance(backend_data[field_name], Model):
+                # Store only the ID of a model instance
+                backend_data[field_name] = backend_data[field_name].pk
+
+        #data['backend_data'] = backend_data
+        #data = import_string(dotted_path=self.action_path).clean(
+        #    form_data=data, request=self.request
+        #)
+        data['backend_data'] = json.dumps(obj=backend_data)
+
+        #data['backend_data'] = json.dumps(obj=backend_data)
+        return data
 
 
 class WebFormUploadForm(UploadBaseForm):

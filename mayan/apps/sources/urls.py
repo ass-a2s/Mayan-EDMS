@@ -5,10 +5,11 @@ from .api_views import (
     APIStagingSourceFileUploadView, APIStagingSourceListView,
     APIStagingSourceView
 )
-from .views import (
-    SourceCheckView, SourceCreateView, SourceDeleteView,
-    SourceEditView, SourceListView, StagingFileDeleteView,
-    DocumentFileUploadInteractiveView, UploadInteractiveView
+from .views.document_file_views import DocumentFileUploadInteractiveView
+from .views.document_views import UploadInteractiveView
+from .views.source_views import (
+    SourceBackendSelectionView, SourceCheckView, SourceCreateView,
+    SourceDeleteView, SourceEditView, SourceListView, StagingFileDeleteView
 )
 from .wizards import DocumentCreateWizard
 
@@ -51,9 +52,13 @@ urlpatterns = [
         regex=r'^sources/$', name='setup_source_list',
         view=SourceListView.as_view()
     ),
+    #url(
+    #    regex=r'^sources/create/(?P<source_type_name>\w+)/$',
+    #    name='setup_source_create', view=SourceCreateView.as_view()
+    #),
     url(
-        regex=r'^sources/create/(?P<source_type_name>\w+)/$',
-        name='setup_source_create', view=SourceCreateView.as_view()
+        regex=r'^sources/(?P<backend_path>[a-zA-Z0-9_.]+)/create/$',
+        name='source_create', view=SourceCreateView.as_view()
     ),
     url(
         regex=r'^sources/(?P<source_id>\d+)/check/$',
@@ -66,6 +71,11 @@ urlpatterns = [
     url(
         regex=r'^sources/(?P<source_id>\d+)/edit/$', name='setup_source_edit',
         view=SourceEditView.as_view()
+    ),
+    url(
+        regex=r'^sources/backend/selection/$',
+        name='source_backend_selection',
+        view=SourceBackendSelectionView.as_view()
     ),
 ]
 

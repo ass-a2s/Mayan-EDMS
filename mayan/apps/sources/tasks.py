@@ -37,7 +37,7 @@ def task_check_interval_source(source_id, test=False):
         logger.debug('acquired lock: %s', lock_id)
 
         try:
-            source = Source.objects.get_subclass(pk=source_id)
+            source = Source.objects.get(pk=source_id)
             if source.enabled or test:
                 source.check_source(test=test)
         except Exception as exception:
@@ -178,7 +178,7 @@ def task_upload_document(self, source_id, document_type_id, shared_uploaded_file
         shared_upload = SharedUploadedFile.objects.get(
             pk=shared_uploaded_file_id
         )
-        source = Source.objects.get_subclass(pk=source_id)
+        source = Source.objects.get(pk=source_id)
 
         if user_id:
             user = get_user_model().objects.get(pk=user_id)

@@ -8,6 +8,7 @@ from django.utils.translation import ugettext_lazy as _
 from django_celery_beat.models import PeriodicTask, IntervalSchedule
 from model_utils.managers import InheritanceManager
 
+from mayan.apps.common.mixins import BackendModelMixin
 from mayan.apps.converter.layers import layer_saved_transformations
 from mayan.apps.documents.models import DocumentType
 from mayan.apps.storage.compressed_files import Archive
@@ -21,14 +22,25 @@ from ..wizards import WizardStep
 logger = logging.getLogger(name=__name__)
 
 
-class Source(models.Model):
+class SourceManager(models.Manager):
+    def interactive(self):
+        interactive_sources_ids = []
+        for source in self.all():
+            if getattr(source.get_backend(), 'is_interactive', False):
+                interactive_sources_ids.append(source.pk)
+
+        return self.filter(id__in=interactive_sources_ids)
+
+
+class Source(BackendModelMixin, models.Model):
     label = models.CharField(
         db_index=True, help_text=_('A short text to describe this source.'),
         max_length=128, unique=True, verbose_name=_('Label')
     )
     enabled = models.BooleanField(default=True, verbose_name=_('Enabled'))
 
-    objects = InheritanceManager()
+    #objects = InheritanceManager()
+    objects = SourceManager()
 
     class Meta:
         ordering = ('label',)
@@ -38,16 +50,21 @@ class Source(models.Model):
     def __str__(self):
         return '%s' % self.label
 
-    @classmethod
-    def class_fullname(cls):
-        return force_text(s=dict(SOURCE_CHOICES).get(cls.source_type))
+    #@classmethod
+    #def class_fullname(cls):
+    #    return force_text(s=dict(SOURCE_CHOICES).get(cls.source_type))
 
     def clean_up_upload_file(self, upload_file_object):
         pass
         # TODO: Should raise NotImplementedError?
 
     def fullname(self):
-        return ' '.join([self.class_fullname(), '"%s"' % self.label])
+        #return ' '.join([self.class_fullname(), '"%s"' % self.label])
+        return '{} {}'.format(self.get_backend_label(), self.label)
+
+    #def get_upload_file_object(self, form_data):
+    #    pass
+    #    # TODO: Should raise NotImplementedError?
 
     def handle_upload(
         self, file_object, description=None, document_type=None, expand=False,
@@ -92,10 +109,6 @@ class Source(models.Model):
         # Return a list of newly created documents. Used by the email source
         # to assign the from and subject metadata values.
         return documents
-
-    def get_upload_file_object(self, form_data):
-        pass
-        # TODO: Should raise NotImplementedError?
 
     def upload_document(
         self, file_object, document_type, description=None, label=None,

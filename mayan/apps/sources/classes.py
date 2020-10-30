@@ -9,9 +9,12 @@ from furl import furl
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.urls import reverse
+from django.utils import six
 from django.utils.encoding import force_text
 from django.utils.functional import cached_property
+from django.utils.translation import ugettext_lazy as _
 
+from mayan.apps.common.class_mixins import AppsModuleLoaderMixin
 from mayan.apps.converter.classes import ConverterBase
 from mayan.apps.converter.transformations import TransformationResize
 from mayan.apps.storage.classes import DefinedStorage
@@ -35,6 +38,64 @@ class SourceUploadedFile(File):
         self.file = file
         self.source = source
         self.extra_data = extra_data
+
+
+class SourceBackendMetaclass(type):
+    _registry = {}
+
+    def __new__(mcs, name, bases, attrs):
+        new_class = super().__new__(
+            mcs, name, bases, attrs
+        )
+        if not new_class.__module__ == 'mayan.apps.sources.classes':
+            mcs._registry[
+                '{}.{}'.format(new_class.__module__, name)
+            ] = new_class
+
+        return new_class
+
+
+class SourceBackendBase(AppsModuleLoaderMixin):
+    """
+    Base class for the source backends.
+
+    The fields attribute is a list of dictionaries with the format:
+    {
+        'name': ''  # Field internal name
+        'label': ''  # Label to show to users
+        'initial': ''  # Field initial value
+        'default': ''  # Default value.
+    }
+    """
+    fields = {}
+
+
+class SourceBackend(
+    six.with_metaclass(SourceBackendMetaclass, SourceBackendBase)
+):
+    _loader_module_name = 'sources'
+
+    @classmethod
+    def get(cls, name):
+        return cls._registry[name]
+
+    @classmethod
+    def get_all(cls):
+        return cls._registry
+
+    @classmethod
+    def get_choices(cls):
+        return sorted(
+            [
+                (
+                    key, backend.label
+                ) for key, backend in cls.get_all().items()
+            ], key=lambda x: x[1]
+        )
+
+
+class NullBackend(SourceBackend):
+    label = _('Null backend')
 
 
 class StagingFile:

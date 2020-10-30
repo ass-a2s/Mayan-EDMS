@@ -24,11 +24,10 @@ from ..icons import icon_staging_folder_file, icon_upload_view_link
 from ..literals import SOURCE_UNCOMPRESS_CHOICE_ASK, SOURCE_UNCOMPRESS_CHOICE_Y
 from ..links import factory_conditional_active_by_source
 from ..menus import menu_sources
-from ..models import (
-    InteractiveSource, Source, SaneScanner, StagingFolderSource
-)
+from ..models import Source
+from ..sources import SourceBackendSANEScanner, SourceBackendStagingFolder
 from ..tasks import task_source_handle_upload
-from ..utils import get_upload_form_class
+#from ..utils import get_upload_form_class
 
 __all__ = ('UploadBaseView', 'UploadInteractiveView')
 logger = logging.getLogger(name=__name__)
@@ -41,8 +40,10 @@ class UploadBaseView(MultiFormView):
     @staticmethod
     def get_active_tab_links(document=None):
         return [
-            UploadBaseView.get_tab_link_for_source(source, document)
-            for source in InteractiveSource.objects.filter(enabled=True).select_subclasses()
+            UploadBaseView.get_tab_link_for_source(
+                source=source, document=document
+            )
+            for source in Source.objects.interactive().filter(enabled=True)
         ]
 
     @staticmethod
@@ -63,17 +64,17 @@ class UploadBaseView(MultiFormView):
         )
 
     def dispatch(self, request, *args, **kwargs):
-        if 'source_id' in kwargs:
-            self.source = get_object_or_404(
-                klass=Source.objects.filter(enabled=True).select_subclasses(),
-                pk=kwargs['source_id']
-            )
-        else:
-            self.source = InteractiveSource.objects.filter(
-                enabled=True
-            ).select_subclasses().first()
+        #interactive_sources_ids = []
+        #for source in Source.objects.filter(enabled=True):
+        #    if getattr(source.get_backend(), 'is_interactive', False):
+        #        interactive_sources_ids.append(source.pk)
 
-        if not InteractiveSource.objects.filter(enabled=True).exists():
+        #interactive_sources = Source.objects.filter(
+        #    id__in=interactive_sources_ids
+        #)
+        interactive_sources = Source.objects.interactive().filter(enabled=True)
+
+        if not interactive_sources.exists():
             messages.error(
                 message=_(
                     'No interactive document sources have been defined or '
@@ -84,6 +85,14 @@ class UploadBaseView(MultiFormView):
                 redirect_to=reverse(viewname='sources:setup_source_list')
             )
 
+        if 'source_id' in kwargs:
+            self.source = get_object_or_404(
+                klass=interactive_sources,
+                pk=kwargs['source_id']
+            )
+        else:
+            self.source = interactive_sources.first()
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
@@ -92,7 +101,7 @@ class UploadBaseView(MultiFormView):
 
         context['source'] = self.source
 
-        if isinstance(self.source, StagingFolderSource):
+        if isinstance(self.source.get_backend(), SourceBackendStagingFolder):
             try:
                 staging_filelist = list(self.source.get_files())
             except Exception as exception:
@@ -127,7 +136,7 @@ class UploadBaseView(MultiFormView):
                         }
                     },
                 ]
-        elif isinstance(self.source, SaneScanner):
+        elif isinstance(self.source.get_backend(), SourceBackendSANEScanner):
             subtemplates_list.append({
                 'name': 'sources/upload_multiform_subtemplate.html',
                 'context': {
@@ -209,11 +218,11 @@ class UploadInteractiveView(UploadBaseView):
                 raise
 
     def forms_valid(self, forms):
-        if self.source.can_compress:
-            if self.source.uncompress == SOURCE_UNCOMPRESS_CHOICE_ASK:
+        if getattr(self.source.get_backend(), 'can_compress', False):
+            if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
                 expand = forms['source_form'].cleaned_data.get('expand')
             else:
-                if self.source.uncompress == SOURCE_UNCOMPRESS_CHOICE_Y:
+                if self.source.get_backend_data['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_Y:
                     expand = True
                 else:
                     expand = False
@@ -221,8 +230,8 @@ class UploadInteractiveView(UploadBaseView):
             expand = False
 
         try:
-            uploaded_file = self.source.get_upload_file_object(
-                forms['source_form'].cleaned_data
+            uploaded_file = self.source.get_backend_instance().get_upload_file_object(
+                form_data=forms['source_form'].cleaned_data
             )
         except SourceException as exception:
             messages.error(message=exception, request=self.request)
@@ -310,7 +319,7 @@ class UploadInteractiveView(UploadBaseView):
             'source: %(source)s'
         ) % {'document_type': self.document_type, 'source': self.source.label}
 
-        if not isinstance(self.source, StagingFolderSource) and not isinstance(self.source, SaneScanner):
+        if not isinstance(self.source.get_backend(), SourceBackendStagingFolder) and not isinstance(self.source.get_backend(), SourceBackendSANEScanner):
             context['subtemplates_list'][0]['context'].update(
                 {
                     'form_action': '{}?{}'.format(
@@ -327,9 +336,10 @@ class UploadInteractiveView(UploadBaseView):
         return context
 
     def get_form_classes(self):
-        source_form_class = get_upload_form_class(
-            source_type_name=self.source.source_type
-        )
+        #source_form_class = get_upload_form_class(
+        #    source_type_name=self.source.source_type
+        #)
+        source_form_class = self.source.get_backend().upload_form_class
 
         # Override source form class to enable the HTML5 file uploader
         if source_form_class == WebFormUploadForm:

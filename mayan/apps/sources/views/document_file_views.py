@@ -16,8 +16,8 @@ from mayan.apps.storage.models import SharedUploadedFile
 
 from ..exceptions import SourceException
 from ..forms import NewFileForm, WebFormUploadForm, WebFormUploadFormHTML5
-from ..models import SaneScanner, StagingFolderSource
-from ..utils import get_upload_form_class
+from ..models import Source, SaneScanner, StagingFolderSource
+#from ..utils import get_upload_form_class
 
 from .document_views import UploadBaseView
 
@@ -183,9 +183,10 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
         return {'action': DOCUMENT_FILE_ACTION_PAGES_NEW}
 
     def get_form_classes(self):
-        source_form_class = get_upload_form_class(
-            source_type_name=self.source.source_type
-        )
+        #source_form_class = get_upload_form_class(
+        #    source_type_name=self.source.source_type
+        #)
+        source_form_class = self.source.get_backend().upload_form_class
 
         # Override source form class to enable the HTML5 file uploader
         if source_form_class == WebFormUploadForm:

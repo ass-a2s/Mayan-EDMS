@@ -44,10 +44,10 @@ def get_form_class(source_type_name):
         return SaneScannerSetupForm
 
 
-def get_upload_form_class(source_type_name):
-    if source_type_name == SOURCE_CHOICE_WEB_FORM:
-        return WebFormUploadForm
-    elif source_type_name == SOURCE_CHOICE_STAGING:
-        return StagingUploadForm
-    elif source_type_name == SOURCE_CHOICE_SANE_SCANNER:
-        return SaneScannerUploadForm
+#def get_upload_form_class(source_type_name):
+#    if source_type_name == SOURCE_CHOICE_WEB_FORM:
+#        return WebFormUploadForm
+#    elif source_type_name == SOURCE_CHOICE_STAGING:
+#        return StagingUploadForm
+#    elif source_type_name == SOURCE_CHOICE_SANE_SCANNER:
+#        return SaneScannerUploadForm
