@@ -49,7 +49,7 @@ class MultiFormView(DjangoFormView):
 
     def _create_form(self, form_name, klass):
         form_kwargs = self.get_form_kwargs(form_name=form_name)
-        form_create_method = 'create_{}_form'.format(form_name)
+        form_create_method = 'create_form__{}'.format(form_name)
         if hasattr(self, form_create_method):
             form = getattr(self, form_create_method)(**form_kwargs)
         else:
@@ -69,7 +69,7 @@ class MultiFormView(DjangoFormView):
 
     def forms_valid(self, forms):
         for form_name, form in forms.items():
-            form_valid_method = '{}_form_valid'.format(form_name)
+            form_valid_method = 'form_valid__{}'.format(form_name)
 
             if hasattr(self, form_valid_method):
                 return getattr(self, form_valid_method)(form=form)
@@ -92,7 +92,11 @@ class MultiFormView(DjangoFormView):
         return self.form_classes
 
     def get_form_extra_kwargs(self, form_name):
-        return None
+        method = 'get_form_extra_kwargs__{}'.format(form_name)
+        if hasattr(self, method):
+            return getattr(self, method)()
+        else:
+            return {}
 
     def get_form_kwargs(self, form_name):
         kwargs = {}
@@ -121,7 +125,7 @@ class MultiFormView(DjangoFormView):
         )
 
     def get_initial(self, form_name):
-        initial_method = 'get_{}_initial'.format(form_name)
+        initial_method = 'get_initial__{}'.format(form_name)
         if hasattr(self, initial_method):
             return getattr(self, initial_method)()
         else:
