@@ -51,9 +51,9 @@ class UploadBaseView(MultiFormView):
         )
 
     def dispatch(self, request, *args, **kwargs):
-        interactive_sources = Source.objects.interactive().filter(enabled=True)
+        self.interactive_sources = Source.objects.interactive().filter(enabled=True)
 
-        if not interactive_sources.exists():
+        if not self.interactive_sources.exists():
             messages.error(
                 message=_(
                     'No interactive document sources have been defined or '
@@ -64,13 +64,7 @@ class UploadBaseView(MultiFormView):
                 redirect_to=reverse(viewname='sources:source_list')
             )
 
-        if 'source_id' in kwargs:
-            self.source = get_object_or_404(
-                klass=interactive_sources,
-                pk=kwargs['source_id']
-            )
-        else:
-            self.source = interactive_sources.first()
+        self.source = self.get_source()
 
         try:
             return super().dispatch(request, *args, **kwargs)
@@ -87,10 +81,11 @@ class UploadBaseView(MultiFormView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        backend_instance = self.source.get_backend_instance()
         context['source'] = self.source
 
         context.update(
-            self.source.get_backend_instance().get_view_context(
+            backend_instance.get_view_context(
                 context=context, request=self.request
             )
         )
@@ -99,3 +94,17 @@ class UploadBaseView(MultiFormView):
         menu_sources.bound_links['sources:document_file_upload'] = self.tab_links
 
         return context
+
+    def get_source(self):
+        if 'source_id' in self.kwargs:
+            return get_object_or_404(
+                klass=self.interactive_sources,
+                pk=self.kwargs['source_id']
+            )
+        else:
+            return interactive_sources.first()
+    #def get_form_extra_kwargs(self, form_name):
+    #    return  {'show_expand': True}#backend_instance.can_compress
+
+    #def get_source_form_initial(self):
+    #    return {'show_expand': True}

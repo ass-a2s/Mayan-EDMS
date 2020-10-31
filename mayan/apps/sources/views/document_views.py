@@ -26,11 +26,8 @@ logger = logging.getLogger(name=__name__)
 
 
 class DocumentUploadInteractiveView(UploadBaseView):
-    def create_source_form_form(self, **kwargs):
-        if hasattr(self.source, 'uncompress'):
-            show_expand = self.source.uncompress == SOURCE_UNCOMPRESS_CHOICE_ASK
-        else:
-            show_expand = False
+    def create_form__source_form(self, **kwargs):
+        show_expand = self.source.get_backend_instance().kwargs.get('uncompress') == SOURCE_UNCOMPRESS_CHOICE_ASK
 
         return self.get_form_classes()['source_form'](
             prefix=kwargs['prefix'],
@@ -40,7 +37,7 @@ class DocumentUploadInteractiveView(UploadBaseView):
             files=kwargs.get('files', None),
         )
 
-    def create_document_form_form(self, **kwargs):
+    def create_form__document_form(self, **kwargs):
         return self.get_form_classes()['document_form'](
             prefix=kwargs['prefix'],
             document_type=self.document_type,
@@ -71,7 +68,7 @@ class DocumentUploadInteractiveView(UploadBaseView):
             if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
                 expand = forms['source_form'].cleaned_data.get('expand')
             else:
-                if self.source.get_backend_data['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_Y:
+                if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_Y:
                     expand = True
                 else:
                     expand = False
@@ -163,17 +160,23 @@ class DocumentUploadInteractiveView(UploadBaseView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['title'] = _(
-            'Upload a document of type "%(document_type)s" from '
-            'source: %(source)s'
-        ) % {'document_type': self.document_type, 'source': self.source.label}
+        context.update(
+            {
+                'title': _(
+                    'Upload a document of type "%(document_type)s" from '
+                    'source: %(source)s'
+                ) % {
+                    'document_type': self.document_type,
+                    'source': self.source.label
+                }
+            }
+        )
 
         return context
 
     def get_form_classes(self):
-        source_form_class = self.source.get_backend().upload_form_class
-
         return {
             'document_form': NewDocumentForm,
-            'source_form': source_form_class
+            'source_form': self.source.get_backend().upload_form_class
+
         }

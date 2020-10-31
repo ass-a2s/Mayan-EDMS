@@ -179,9 +179,7 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
         return {'action': DOCUMENT_FILE_ACTION_PAGES_NEW}
 
     def get_form_classes(self):
-        source_form_class = self.source.get_backend().upload_form_class
-
         return {
             'document_form': NewFileForm,
-            'source_form': source_form_class
+            'source_form': self.source.get_backend().upload_form_class
         }

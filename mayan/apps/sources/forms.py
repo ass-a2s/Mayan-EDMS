@@ -132,8 +132,6 @@ class SourceBackendDynamicForm(DynamicModelForm):
         #    form_data=data, request=self.request
         #)
         data['backend_data'] = json.dumps(obj=backend_data)
-        print("!@#!@#@!# backend_data:", backend_data)
-        print("!@#!@#@!# data:", data)
         #data['backend_data'] = json.dumps(obj=backend_data)
         return data
 

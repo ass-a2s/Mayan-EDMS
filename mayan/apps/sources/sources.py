@@ -214,6 +214,7 @@ class SourceBackendPOP3Email(SourceBackend):
 
 
 class SourceBackendSANEScanner(SourceBackend):
+    can_compress = True
     field_order = ('device_name', 'adf_mode', 'mode', 'resolution', 'source')
     fields = {
         'device_name': {
@@ -364,8 +365,6 @@ class SourceBackendSANEScanner(SourceBackend):
                 ['--source', self.kwargs['source']]
             )
 
-        print("@@@@@@@@@@@@@@@@ arguments", arguments)
-
         file_object = self.execute_command(arguments=arguments)
 
         return SourceUploadedFile(
@@ -392,10 +391,14 @@ class SourceBackendSANEScanner(SourceBackend):
 
 class SourceBackendStagingFolder(SourceBackend):
     can_compress = True
-    field_order = ('uncompress', 'folder_path')
+    field_order = (
+        'uncompress', 'folder_path', 'preview_width', 'preview_height',
+        'delete_after_upload'
+    )
     fields = {
         'uncompress': {
-            'class': 'django.forms.ChoiceField', 'default': '',
+            'class': 'django.forms.ChoiceField',
+            'default': '',
             'help_text': _(
                 'Whether to expand or not compressed archives.'
             ),
@@ -406,7 +409,8 @@ class SourceBackendStagingFolder(SourceBackend):
             'required': True
         },
         'folder_path': {
-            'class': 'django.forms.CharField', 'default': '',
+            'class': 'django.forms.CharField',
+            'default': '',
             'help_text': _(
                 'Server side filesystem path.'
             ),
@@ -415,6 +419,36 @@ class SourceBackendStagingFolder(SourceBackend):
             },
             'label': _('Folder path'),
             'required': True
+        },
+        'preview_width': {
+            'class': 'django.forms.IntegerField',
+            'help_text': _(
+                'Width value to be passed to the converter backend.'
+            ),
+            'kwargs': {
+                'min_value': 0
+            },
+            'label': _('Preview width'),
+            'required': True
+        },
+        'preview_height': {
+            'class': 'django.forms.IntegerField',
+            'help_text': _(
+                'Height value to be passed to the converter backend.'
+            ),
+            'kwargs': {
+                'min_value': 0
+            },
+            'label': _('Preview height'),
+            'required': False
+        },
+        'delete_after_upload': {
+            'class': 'django.forms.BooleanField',
+            'help_text': _(
+                'Delete the file after is has been successfully uploaded.'
+            ),
+            'label': _('Delete after upload'),
+            'required': False
         }
     }
     icon_staging_folder_file = Icon(driver_name='fontawesome', symbol='file')
@@ -481,7 +515,6 @@ class SourceBackendStagingFolder(SourceBackend):
                 'name': 'appearance/generic_multiform_subtemplate.html',
                 'context': {
                     'forms': context['forms'],
-                    'title': _('Document properties'),
                 },
             },
             {
@@ -500,36 +533,11 @@ class SourceBackendStagingFolder(SourceBackend):
                         'No staging files available'
                     ),
                     'object_list': staging_filelist,
-                    'title': _('Files in staging path'),
                 }
             },
         ]
 
         return {'subtemplates_list': subtemplates_list}
-
-    '''
-    preview_width = models.IntegerField(
-        help_text=_('Width value to be passed to the converter backend.'),
-        verbose_name=_('Preview width')
-    )
-    preview_height = models.IntegerField(
-        blank=True, null=True,
-        help_text=_('Height value to be passed to the converter backend.'),
-        verbose_name=_('Preview height')
-    )
-    uncompress = models.CharField(
-        choices=SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES, max_length=1,
-        help_text=_('Whether to expand or not compressed archives.'),
-        verbose_name=_('Uncompress')
-    )
-    delete_after_upload = models.BooleanField(
-        default=True,
-        help_text=_(
-            'Delete the file after is has been successfully uploaded.'
-        ),
-        verbose_name=_('Delete after upload')
-    )
-    '''
 
 
 class SourceBackendWatchFolder(SourceBackend):
@@ -656,7 +664,6 @@ class SourceBackendWebForm(SourceBackend):
                     'context': {
                         'forms': context['forms'],
                         'is_multipart': True,
-                        'title': _('Document properties'),
                         'form_action': '{}?{}'.format(
                             reverse(
                                 viewname=request.resolver_match.view_name,
