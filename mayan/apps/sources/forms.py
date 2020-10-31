@@ -67,7 +67,9 @@ class StagingUploadForm(UploadBaseForm):
 
         try:
             self.fields['staging_file_id'].choices = [
-                (staging_file.encoded_filename, force_text(s=staging_file)) for staging_file in self.source.get_files()
+                (
+                    staging_file.encoded_filename, force_text(s=staging_file)
+                ) for staging_file in self.source.get_backend_instance().get_files()
             ]
         except Exception as exception:
             logger.error('exception: %s', exception)
@@ -86,10 +88,9 @@ class SourceBackendSelectionForm(forms.Form):
         self.fields['backend'].choices = SourceBackend.get_choices()
 
 
-
 class SourceBackendDynamicForm(DynamicModelForm):
     class Meta:
-        fields = ('label', 'enabled',)#, 'uncompress')
+        fields = ('label', 'enabled', 'backend_data')
         model = Source
         widgets = {'backend_data': forms.widgets.HiddenInput}
 
@@ -131,16 +132,17 @@ class SourceBackendDynamicForm(DynamicModelForm):
         #    form_data=data, request=self.request
         #)
         data['backend_data'] = json.dumps(obj=backend_data)
-
+        print("!@#!@#@!# backend_data:", backend_data)
+        print("!@#!@#@!# data:", data)
         #data['backend_data'] = json.dumps(obj=backend_data)
         return data
 
 
-class WebFormUploadForm(UploadBaseForm):
-    file = forms.FileField(label=_('File'))
+#class WebFormUploadForm(UploadBaseForm):
+#    file = forms.FileField(label=_('File'))
 
 
-class WebFormUploadFormHTML5(WebFormUploadForm):
+class WebFormUploadFormHTML5(UploadBaseForm):
     file = forms.FileField(
         label=_('File'), widget=forms.widgets.FileInput(
             attrs={'class': 'hidden', 'hidden': True}
@@ -152,62 +154,62 @@ class SaneScannerUploadForm(UploadBaseForm):
     pass
 
 
-class SaneScannerSetupForm(forms.ModelForm):
-    class Meta:
-        fields = (
-            'label', 'device_name', 'mode', 'resolution', 'source',
-            'adf_mode', 'enabled'
-        )
-        model = SaneScanner
+#class SaneScannerSetupForm(forms.ModelForm):
+#    class Meta:
+#        fields = (
+#            'label', 'device_name', 'mode', 'resolution', 'source',
+#            'adf_mode', 'enabled'
+#        )
+#        model = SaneScanner
 
 
-class WebFormSetupForm(forms.ModelForm):
-    class Meta:
-        fields = ('label', 'enabled', 'uncompress')
-        model = WebFormSource
+#class WebFormSetupForm(forms.ModelForm):
+#    class Meta:
+#        fields = ('label', 'enabled', 'uncompress')
+#        model = WebFormSource
 
 
-class StagingFolderSetupForm(forms.ModelForm):
-    class Meta:
-        fields = (
-            'label', 'enabled', 'folder_path', 'preview_width',
-            'preview_height', 'uncompress', 'delete_after_upload'
-        )
-        model = StagingFolderSource
+#class StagingFolderSetupForm(forms.ModelForm):
+#    class Meta:
+#        fields = (
+#            'label', 'enabled', 'folder_path', 'preview_width',
+#            'preview_height', 'uncompress', 'delete_after_upload'
+#        )
+#        model = StagingFolderSource
 
 
-class EmailSetupBaseForm(forms.ModelForm):
-    class Meta:
-        fields = (
-            'label', 'enabled', 'interval', 'document_type', 'uncompress',
-            'host', 'ssl', 'port', 'username', 'password',
-            'metadata_attachment_name', 'subject_metadata_type',
-            'from_metadata_type', 'store_body'
-        )
-        widgets = {
-            'password': forms.widgets.PasswordInput(render_value=True)
-        }
+#class EmailSetupBaseForm(forms.ModelForm):
+#    class Meta:
+#        fields = (
+#            'label', 'enabled', 'interval', 'document_type', 'uncompress',
+#            'host', 'ssl', 'port', 'username', 'password',
+#            'metadata_attachment_name', 'subject_metadata_type',
+#            'from_metadata_type', 'store_body'
+#        )
+#        widgets = {
+#            'password': forms.widgets.PasswordInput(render_value=True)
+#        }#
 
 
-class IMAPEmailSetupForm(EmailSetupBaseForm):
-    class Meta(EmailSetupBaseForm.Meta):
-        fields = EmailSetupBaseForm.Meta.fields + (
-            'mailbox', 'search_criteria', 'store_commands',
-            'mailbox_destination', 'execute_expunge'
-        )
-        model = IMAPEmail
+#class IMAPEmailSetupForm(EmailSetupBaseForm):
+#    class Meta(EmailSetupBaseForm.Meta):
+#        fields = EmailSetupBaseForm.Meta.fields + (
+#            'mailbox', 'search_criteria', 'store_commands',
+#            'mailbox_destination', 'execute_expunge'
+#        )
+#        model = IMAPEmail#
 
 
-class POP3EmailSetupForm(EmailSetupBaseForm):
-    class Meta(EmailSetupBaseForm.Meta):
-        fields = EmailSetupBaseForm.Meta.fields + ('timeout',)
-        model = POP3Email
+#class POP3EmailSetupForm(EmailSetupBaseForm):
+#    class Meta(EmailSetupBaseForm.Meta):
+#        fields = EmailSetupBaseForm.Meta.fields + ('timeout',)
+#        model = POP3Email
 
 
-class WatchFolderSetupForm(forms.ModelForm):
-    class Meta:
-        fields = (
-            'label', 'enabled', 'interval', 'document_type', 'uncompress',
-            'folder_path', 'include_subdirectories'
-        )
-        model = WatchFolderSource
+#class WatchFolderSetupForm(forms.ModelForm):
+#    class Meta:
+#        fields = (
+#            'label', 'enabled', 'interval', 'document_type', 'uncompress',
+#            'folder_path', 'include_subdirectories'
+#        )
+#        model = WatchFolderSource

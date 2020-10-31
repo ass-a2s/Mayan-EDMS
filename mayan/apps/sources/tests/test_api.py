@@ -7,8 +7,8 @@ from mayan.apps.rest_api.tests.base import BaseAPITestCase
 
 from ..models.staging_folder_sources import StagingFolderSource
 from ..permissions import (
-    permission_sources_setup_create, permission_sources_setup_delete,
-    permission_sources_setup_edit, permission_sources_setup_view,
+    permission_sources_create, permission_sources_delete,
+    permission_sources_edit, permission_sources_view,
     permission_staging_file_delete
 )
 
@@ -32,7 +32,7 @@ class StagingFolderAPIViewTestCase(
         )
 
     def test_staging_folder_create_api_view_with_permission(self):
-        self.grant_permission(permission=permission_sources_setup_create)
+        self.grant_permission(permission=permission_sources_create)
 
         staging_folder_count = StagingFolderSource.objects.count()
 
@@ -58,7 +58,7 @@ class StagingFolderAPIViewTestCase(
     def test_staging_folder_delete_api_view_with_permission(self):
         self._create_test_staging_folder()
 
-        self.grant_permission(permission=permission_sources_setup_delete)
+        self.grant_permission(permission=permission_sources_delete)
 
         staging_folder_count = StagingFolderSource.objects.count()
 
@@ -83,7 +83,7 @@ class StagingFolderAPIViewTestCase(
     def test_staging_folder_edit_api_view_via_patch_with_permission(self):
         self._create_test_staging_folder()
 
-        self.grant_permission(permission=permission_sources_setup_edit)
+        self.grant_permission(permission=permission_sources_edit)
 
         staging_folder_label = self.test_staging_folder.label
 
@@ -115,7 +115,7 @@ class StagingFolderAPIViewTestCase(
     def test_staging_folder_edit_api_view_via_put_with_permission(self):
         self._create_test_staging_folder()
 
-        self.grant_permission(permission=permission_sources_setup_edit)
+        self.grant_permission(permission=permission_sources_edit)
 
         staging_folder_label = self.test_staging_folder.label
 
@@ -142,7 +142,7 @@ class StagingFolderAPIViewTestCase(
     def test_staging_folder_api_list_api_view_with_permission(self):
         self._create_test_staging_folder()
 
-        self.grant_permission(permission=permission_sources_setup_view)
+        self.grant_permission(permission=permission_sources_view)
 
         response = self._request_test_staging_folder_list_api_view()
         self.assertEqual(response.status_code, status.HTTP_200_OK)

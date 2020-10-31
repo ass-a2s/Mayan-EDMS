@@ -15,11 +15,9 @@ from mayan.apps.documents.tasks import task_document_file_upload
 from mayan.apps.storage.models import SharedUploadedFile
 
 from ..exceptions import SourceException
-from ..forms import NewFileForm, WebFormUploadForm, WebFormUploadFormHTML5
-from ..models import Source, SaneScanner, StagingFolderSource
-#from ..utils import get_upload_form_class
+from ..forms import NewFileForm
 
-from .document_views import UploadBaseView
+from .base import UploadBaseView
 
 __all__ = ('DocumentFileUploadInteractiveView',)
 logger = logging.getLogger(name=__name__)
@@ -78,8 +76,8 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
 
     def forms_valid(self, forms):
         try:
-            uploaded_file = self.source.get_upload_file_object(
-                forms['source_form'].cleaned_data
+            uploaded_file = self.source.get_backend_instance().get_upload_file_object(
+                form_data=forms['source_form'].cleaned_data
             )
         except SourceException as exception:
             messages.error(message=exception, request=self.request)
@@ -169,13 +167,11 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
             }
         )
 
-        if not isinstance(self.source, StagingFolderSource) and not isinstance(self.source, SaneScanner):
-            context.update(
-                {
-                    'form_css_classes': 'dropzone',
-                    'form_disable_submit': True
-                }
+        context.update(
+            self.source.get_backend_instance().get_view_context(
+                context=context, request=self.request
             )
+        )
 
         return context
 
@@ -183,14 +179,7 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
         return {'action': DOCUMENT_FILE_ACTION_PAGES_NEW}
 
     def get_form_classes(self):
-        #source_form_class = get_upload_form_class(
-        #    source_type_name=self.source.source_type
-        #)
         source_form_class = self.source.get_backend().upload_form_class
-
-        # Override source form class to enable the HTML5 file uploader
-        if source_form_class == WebFormUploadForm:
-            source_form_class = WebFormUploadFormHTML5
 
         return {
             'document_form': NewFileForm,

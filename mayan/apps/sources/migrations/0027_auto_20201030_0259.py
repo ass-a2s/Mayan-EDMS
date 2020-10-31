@@ -2,7 +2,6 @@ import json
 
 from django.db import migrations
 
-#from ..sources import SourceBackendWebForm
 
 SOURCE_BACKEND_MAPPING_LIST = [
     {
@@ -32,7 +31,7 @@ SOURCE_BACKEND_MAPPING_LIST = [
 ]
 
 
-def convert_source_model(apps, schema_editor, source_backend_mapping):#backend_path, model):
+def convert_source_model(apps, schema_editor, source_backend_mapping):
     Source = apps.get_model(app_label='sources', model_name='Source')
     Model = apps.get_model(app_label='sources', model_name=source_backend_mapping['model_name'])
 
@@ -47,16 +46,11 @@ def convert_source_model(apps, schema_editor, source_backend_mapping):#backend_p
 
 def operation_convert_sources(apps, schema_editor):
     Source = apps.get_model(app_label='sources', model_name='Source')
-    #WebFormSource = apps.get_model(
-    #    app_label='sources', model_name='WebFormSource'
-    #)
 
     for source_backend_mapping in SOURCE_BACKEND_MAPPING_LIST:
         convert_source_model(
             apps=apps, schema_editor=schema_editor,
             source_backend_mapping=source_backend_mapping
-            #backend_path='mayan.apps.sources.sources.SourceBackendWebForm',
-            #model=WebFormSource
         )
 
 

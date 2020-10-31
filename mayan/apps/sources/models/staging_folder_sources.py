@@ -1,13 +1,9 @@
 import logging
-import os
 
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
-from ..classes import SourceUploadedFile, StagingFile
-from ..literals import (
-    SOURCE_CHOICE_STAGING, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
-)
+from ..literals import SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
 
 from .base import InteractiveSource
 
@@ -33,7 +29,7 @@ class StagingFolderSource(InteractiveSource):
     """
     can_compress = True
     is_interactive = True
-    source_type = SOURCE_CHOICE_STAGING
+    #source_type = SOURCE_CHOICE_STAGING
 
     folder_path = models.CharField(
         max_length=255, help_text=_('Server side filesystem path.'),
@@ -66,40 +62,3 @@ class StagingFolderSource(InteractiveSource):
     class Meta:
         verbose_name = _('Staging folder')
         verbose_name_plural = _('Staging folders')
-
-    def clean_up_upload_file(self, upload_file_object):
-        if self.delete_after_upload:
-            try:
-                upload_file_object.extra_data.delete()
-            except Exception as exception:
-                logger.error(
-                    'Error deleting staging file: %s; %s',
-                    upload_file_object, exception
-                )
-                raise Exception(
-                    _('Error deleting staging file; %s') % exception
-                )
-
-    def get_file(self, *args, **kwargs):
-        return StagingFile(staging_folder=self, *args, **kwargs)
-
-    def get_files(self):
-        try:
-            for entry in sorted([os.path.normcase(f) for f in os.listdir(self.folder_path) if os.path.isfile(os.path.join(self.folder_path, f))]):
-                yield self.get_file(filename=entry)
-        except OSError as exception:
-            logger.error(
-                'Unable get list of staging files from source: %s; %s',
-                self, exception
-            )
-            raise Exception(
-                _('Unable get list of staging files: %s') % exception
-            )
-
-    def get_upload_file_object(self, form_data):
-        staging_file = self.get_file(
-            encoded_filename=form_data['staging_file_id']
-        )
-        return SourceUploadedFile(
-            source=self, file=staging_file.as_file(), extra_data=staging_file
-        )

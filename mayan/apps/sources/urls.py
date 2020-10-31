@@ -6,7 +6,7 @@ from .api_views import (
     APIStagingSourceView
 )
 from .views.document_file_views import DocumentFileUploadInteractiveView
-from .views.document_views import UploadInteractiveView
+from .views.document_views import DocumentUploadInteractiveView
 from .views.source_views import (
     SourceBackendSelectionView, SourceCheckView, SourceCreateView,
     SourceDeleteView, SourceEditView, SourceListView, StagingFileDeleteView
@@ -28,12 +28,12 @@ urlpatterns = [
     url(
         regex=r'^documents/upload/new/interactive/(?P<source_id>\d+)/$',
         name='document_upload_interactive',
-        view=UploadInteractiveView.as_view()
+        view=DocumentUploadInteractiveView.as_view()
     ),
     url(
         regex=r'^documents/upload/new/interactive/$',
         name='document_upload_interactive',
-        view=UploadInteractiveView.as_view()
+        view=DocumentUploadInteractiveView.as_view()
     ),
     url(
         regex=r'^documents/(?P<document_id>\d+)/files/upload/interactive/(?P<source_id>\d+)/$',
@@ -49,7 +49,7 @@ urlpatterns = [
     # Setup views
 
     url(
-        regex=r'^sources/$', name='setup_source_list',
+        regex=r'^sources/$', name='source_list',
         view=SourceListView.as_view()
     ),
     #url(
@@ -57,26 +57,26 @@ urlpatterns = [
     #    name='setup_source_create', view=SourceCreateView.as_view()
     #),
     url(
+        regex=r'^sources/backend/selection/$',
+        name='source_backend_selection',
+        view=SourceBackendSelectionView.as_view()
+    ),
+    url(
         regex=r'^sources/(?P<backend_path>[a-zA-Z0-9_.]+)/create/$',
         name='source_create', view=SourceCreateView.as_view()
     ),
     url(
         regex=r'^sources/(?P<source_id>\d+)/check/$',
-        name='setup_source_check', view=SourceCheckView.as_view()
+        name='source_check', view=SourceCheckView.as_view()
     ),
     url(
         regex=r'^sources/(?P<source_id>\d+)/delete/$',
-        name='setup_source_delete', view=SourceDeleteView.as_view()
+        name='source_delete', view=SourceDeleteView.as_view()
     ),
     url(
-        regex=r'^sources/(?P<source_id>\d+)/edit/$', name='setup_source_edit',
+        regex=r'^sources/(?P<source_id>\d+)/edit/$', name='source_edit',
         view=SourceEditView.as_view()
-    ),
-    url(
-        regex=r'^sources/backend/selection/$',
-        name='source_backend_selection',
-        view=SourceBackendSelectionView.as_view()
-    ),
+    )
 ]
 
 api_urls = [

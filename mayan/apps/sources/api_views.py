@@ -14,11 +14,13 @@ from mayan.apps.rest_api import generics
 from mayan.apps.storage.classes import DefinedStorage
 from mayan.apps.storage.models import SharedUploadedFile
 
-from .literals import STAGING_FILE_IMAGE_TASK_TIMEOUT, STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
-from .models import StagingFolderSource
+from .literals import (
+    STAGING_FILE_IMAGE_TASK_TIMEOUT, STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
+)
+from .models import Source, StagingFolderSource
 from .permissions import (
-    permission_sources_setup_create, permission_sources_setup_delete,
-    permission_sources_setup_edit, permission_sources_setup_view,
+    permission_sources_create, permission_sources_delete,
+    permission_sources_edit, permission_sources_view,
     permission_staging_file_delete
 )
 from .serializers import (
@@ -44,8 +46,8 @@ class APIStagingSourceFileView(generics.RetrieveDestroyAPIView):
             )
 
         staging_folder = get_object_or_404(
-            klass=StagingFolderSource, pk=self.kwargs['staging_folder_pk']
-        )
+            klass=Source, pk=self.kwargs['staging_folder_pk']
+        ).get_backend_instance()
         return staging_folder.get_file(
             encoded_filename=self.kwargs['encoded_filename']
         )
@@ -57,10 +59,12 @@ class APIStagingSourceListView(generics.ListCreateAPIView):
     post: Create a new staging folders.
     """
     mayan_view_permissions = {
-        'GET': (permission_sources_setup_view,),
-        'POST': (permission_sources_setup_create,)
+        'GET': (permission_sources_view,),
+        'POST': (permission_sources_create,)
     }
-    queryset = StagingFolderSource.objects.all()
+    queryset = Source.objects.filter(
+        backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
+    )
     serializer_class = StagingFolderSerializer
 
 
@@ -72,12 +76,14 @@ class APIStagingSourceView(generics.RetrieveUpdateDestroyAPIView):
     put: Edit the selected staging folders.
     """
     mayan_object_permissions = {
-        'DELETE': (permission_sources_setup_delete,),
-        'GET': (permission_sources_setup_view,),
-        'PATCH': (permission_sources_setup_edit,),
-        'PUT': (permission_sources_setup_edit,)
+        'DELETE': (permission_sources_delete,),
+        'GET': (permission_sources_view,),
+        'PATCH': (permission_sources_edit,),
+        'PUT': (permission_sources_edit,)
     }
-    queryset = StagingFolderSource.objects.all()
+    queryset = Source.objects.filter(
+        backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
+    )
     serializer_class = StagingFolderSerializer
 
 

@@ -6,6 +6,7 @@ from urllib.parse import quote_plus, unquote_plus
 
 from furl import furl
 
+from django.apps import apps
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.urls import reverse
@@ -93,6 +94,17 @@ class SourceBackend(
             ], key=lambda x: x[1]
         )
 
+    def __init__(self, model_instance_id, **kwargs):
+        self.model_instance_id = model_instance_id
+        self.kwargs = kwargs
+
+    def get_model_instance(self):
+        Source = apps.get_model(app_label='sources', model_name='Source')
+        return Source.objects.get(pk=self.model_instance_id)
+
+    def get_view_context(self, context, request):
+        return {}
+
 
 class NullBackend(SourceBackend):
     label = _('Null backend')
@@ -128,7 +140,7 @@ class StagingFile:
 
     @property
     def cache_filename(self):
-        return '{}{}'.format(self.staging_folder.pk, self.encoded_filename)
+        return '{}{}'.format(self.staging_folder.model_instance_id, self.encoded_filename)
 
     def delete(self):
         self.storage.delete(self.cache_filename)
@@ -159,7 +171,7 @@ class StagingFile:
         final_url.args = kwargs
         final_url.path = reverse(
             'rest_api:stagingfolderfile-image', kwargs={
-                'staging_folder_pk': self.staging_folder.pk,
+                'staging_folder_pk': self.staging_folder.model_instance_id,
                 'encoded_filename': self.encoded_filename
             }
         )
@@ -198,7 +210,7 @@ class StagingFile:
         return time.ctime(os.path.getctime(self.get_full_path()))
 
     def get_full_path(self):
-        return os.path.join(self.staging_folder.folder_path, self.filename)
+        return os.path.join(self.staging_folder.kwargs['folder_path'], self.filename)
 
     def get_image(self, transformations=None):
         cache_filename = self.cache_filename

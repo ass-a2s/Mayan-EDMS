@@ -219,7 +219,7 @@ class SourceTestMixin:
 
 class SourceViewTestMixin:
     def _request_setup_source_list_view(self):
-        return self.get(viewname='sources:setup_source_list')
+        return self.get(viewname='sources:source_list')
 
     def _request_setup_source_check_get_view(self):
         return self.get(

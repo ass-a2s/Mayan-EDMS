@@ -14,9 +14,8 @@ from mayan.apps.documents.models import DocumentType
 from mayan.apps.storage.compressed_files import Archive
 from mayan.apps.storage.exceptions import NoMIMETypeMatch
 
-from ..literals import (
-    DEFAULT_INTERVAL, SOURCE_CHOICES, SOURCE_UNCOMPRESS_CHOICES
-)
+## Remove DEFAULT_INTERVAL import
+from ..literals import DEFAULT_INTERVAL, SOURCE_UNCOMPRESS_CHOICES
 from ..wizards import WizardStep
 
 logger = logging.getLogger(name=__name__)

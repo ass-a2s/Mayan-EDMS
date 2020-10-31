@@ -1,10 +1,31 @@
+import logging
+import os
+from pathlib import Path
+import subprocess
+
+from django.contrib import messages
+from django.urls import reverse
+from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
-from .classes import SourceBackend, SourceUploadedFile
-from .forms import (
-    SaneScannerUploadForm, StagingUploadForm, WebFormUploadForm
+from mayan.apps.appearance.classes import Icon
+from mayan.apps.storage.utils import TemporaryFile
+
+from .classes import (
+    PseudoFile, SourceBackend, SourceUploadedFile, StagingFile
 )
-from .literals import DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
+from .exceptions import SourceException
+from .forms import (
+    SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5
+)
+from .literals import (
+    DEFAULT_INTERVAL, SCANNER_ADF_MODE_CHOICES, SCANNER_MODE_CHOICES,
+    SCANNER_MODE_COLOR, SCANNER_SOURCE_CHOICES,
+    SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
+)
+from .settings import setting_scanimage_path
+
+logger = logging.getLogger(name=__name__)
 
 #                POP3Email, IMAPEmail, StagingFolderSource, WatchFolderSource,
 #                WebFormSource,
@@ -54,21 +75,24 @@ class SourceBackendIMAPEmail(SourceBackend):
     field_order = ('interval', 'uncompress',)
     fields = {
         'interval': {
-            'label': _('Interval'),
             'class': 'django.forms.IntegerField',
             'default': DEFAULT_INTERVAL,
             'help_text': _(
                 'Interval in seconds between checks for new documents.'
-            ), 'required': True
+            ),
+            'label': _('Interval'),
+            'required': True
         },
         'uncompress': {
-            'label': _('Uncompress'),
             'class': 'django.forms.ChoiceField', 'default': '',
             'help_text': _(
                 'Whether to expand or not compressed archives.'
-            ), 'kwargs': {
+            ),
+            'kwargs': {
                 'choices': SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-            }, 'required': True
+            },
+            'label': _('Uncompress'),
+            'required': True
         },
     }
     label = _('IMAP email')
@@ -153,91 +177,30 @@ class SourceBackendIMAPEmail(SourceBackend):
     '''
 
 
-class SourceBackendSANEScanner(SourceBackend):
-    field_order = ('device_name',)
-    fields = {
-        'device_name': {
-            'label': _('Device name'),
-            'class': 'django.forms.CharField', 'default': '',
-            'help_text': _(
-                'Device name as returned by the SANE backend.'
-            ), 'kwargs': {
-                'max_length': 255,
-            }, 'required': True
-        }
-    }
-    is_interactive = True
-    label = _('SANE Scanner')
-    upload_form_class = SaneScannerUploadForm
-    #widgets = {
-    #    'uncompress': {
-    #        'class': 'django.forms.widgets.Select', 'kwargs': {
-    #            'attrs': {'class': 'select2'},
-    #        }
-    #    }
-    #}
-
-    """
-class SaneScanner(InteractiveSource):
-    can_compress = False
-    is_interactive = True
-    source_type = SOURCE_CHOICE_SANE_SCANNER
-
-    device_name = models.CharField(
-        max_length=255,
-        help_text=_('Device name as returned by the SANE backend.'),
-        verbose_name=_('Device name')
-    )
-    mode = models.CharField(
-        blank=True, choices=SCANNER_MODE_CHOICES, default=SCANNER_MODE_COLOR,
-        help_text=_(
-            'Selects the scan mode (e.g., lineart, monochrome, or color). '
-            'If this option is not supported by your scanner, leave it blank.'
-        ), max_length=16, verbose_name=_('Mode')
-    )
-    resolution = models.PositiveIntegerField(
-        blank=True, null=True, help_text=_(
-            'Sets the resolution of the scanned image in DPI (dots per inch). '
-            'Typical value is 200. If this option is not supported by your '
-            'scanner, leave it blank.'
-        ), verbose_name=_('Resolution')
-    )
-    source = models.CharField(
-        blank=True, choices=SCANNER_SOURCE_CHOICES, help_text=_(
-            'Selects the scan source (such as a document-feeder). If this '
-            'option is not supported by your scanner, leave it blank.'
-        ), max_length=32, null=True, verbose_name=_('Paper source')
-    )
-    adf_mode = models.CharField(
-        blank=True, choices=SCANNER_ADF_MODE_CHOICES,
-        help_text=_(
-            'Selects the document feeder mode (simplex/duplex). If this '
-            'option is not supported by your scanner, leave it blank.'
-        ), max_length=16, verbose_name=_('ADF mode')
-    )
-    """
-
 
 class SourceBackendPOP3Email(SourceBackend):
     can_compress = True
     field_order = ('interval', 'uncompress',)
     fields = {
         'interval': {
-            'label': _('Interval'),
             'class': 'django.forms.IntegerField',
             'default': DEFAULT_INTERVAL,
             'help_text': _(
                 'Interval in seconds between checks for new documents.'
-            ), 'required': True
+            ),
+            'label': _('Interval'),
+            'required': True
         },
         'uncompress': {
-            'label': _('Uncompress'),
             'class': 'django.forms.ChoiceField', 'default': '',
             'help_text': _(
                 'Whether to expand or not compressed archives.'
-            ), 'kwargs': {
+            ),
+            'kwargs': {
                 'choices': SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-            }, 'required': True
+            },
+            'label': _('Uncompress'),
+            'required': True
         },
     }
     label = _('POP3 email')
@@ -250,30 +213,211 @@ class SourceBackendPOP3Email(SourceBackend):
     }
 
 
+class SourceBackendSANEScanner(SourceBackend):
+    field_order = ('device_name', 'adf_mode', 'mode', 'resolution', 'source')
+    fields = {
+        'device_name': {
+            'class': 'django.forms.CharField',
+            'help_text': _(
+                'Device name as returned by the SANE backend.'
+            ),
+            'kwargs': {'max_length': 255,},
+            'label': _('Device name'),
+            'required': True
+        },
+        'adf_mode': {
+            'class': 'django.forms.ChoiceField',
+            #'default': SCANNER_MODE_COLOR,
+            'help_text': _(
+                'Selects the document feeder mode (simplex/duplex). If this '
+                'option is not supported by your scanner, leave it blank.'
+            ),
+            'kwargs': {
+                'choices': ((None, '---------'),) + SCANNER_ADF_MODE_CHOICES,
+            },
+            'label': _('ADF mode'),
+            'required': False,
+        },
+        'mode': {
+            'class': 'django.forms.ChoiceField',
+            #'default': SCANNER_MODE_COLOR,
+            'help_text': _(
+                'Selects the scan mode (e.g., lineart, monochrome, or color). '
+                'If this option is not supported by your scanner, leave it blank.'
+            ),
+            'kwargs': {
+                'choices': ((None, '---------'),) + SCANNER_MODE_CHOICES,
+            },
+            'label': _('Mode'),
+            'required': False,
+        },
+        'resolution': {
+            'class': 'django.forms.IntegerField',
+            #'default': SCANNER_MODE_COLOR,
+            'help_text': _(
+                'Sets the resolution of the scanned image in DPI (dots per inch). '
+                'Typical value is 200. If this option is not supported by your '
+                'scanner, leave it blank.'
+            ),
+            'kwargs': {
+            #    'choices': ((None, '---------'),) + SCANNER_MODE_CHOICES,
+                'min_value': 0
+            },
+            'label': _('Resolution'),
+            'required': False,
+        },
+        'source': {
+            'class': 'django.forms.ChoiceField',
+            #'default': SCANNER_MODE_COLOR,
+            'help_text': _(
+                'Selects the scan source (such as a document-feeder). If this '
+                'option is not supported by your scanner, leave it blank.'
+            ),
+            'kwargs': {
+                'choices': ((None, '---------'),) + SCANNER_SOURCE_CHOICES,
+                #'min_value': 0
+            },
+            'label': _('Paper source'),
+            'required': False,
+        }
+    }
+    is_interactive = True
+    label = _('SANE Scanner')
+    upload_form_class = SaneScannerUploadForm
+    widgets = {
+        'adf_mode': {
+            'class': 'django.forms.widgets.Select', 'kwargs': {
+                'attrs': {'class': 'select2'},
+            }
+        },
+        'mode': {
+            'class': 'django.forms.widgets.Select', 'kwargs': {
+                'attrs': {'class': 'select2'},
+            }
+        },
+        'source': {
+            'class': 'django.forms.widgets.Select', 'kwargs': {
+                'attrs': {'class': 'select2'},
+            }
+        }
+    }
+
+    def execute_command(self, arguments):
+        command_line = [
+            setting_scanimage_path.value
+        ]
+        command_line.extend(arguments)
+
+        with TemporaryFile() as stderr_file_object:
+            stdout_file_object = TemporaryFile()
+
+            try:
+                logger.debug('Scan command line: %s', command_line)
+                subprocess.check_call(
+                    command_line, stdout=stdout_file_object,
+                    stderr=stderr_file_object
+                )
+            except subprocess.CalledProcessError:
+                stderr_file_object.seek(0)
+                error_message = stderr_file_object.read()
+                logger.error(
+                    'Exception while executing scanning command for source:%s ; %s', self,
+                    error_message
+                )
+
+                message = _(
+                    'Error while executing scanning command '
+                    '"%(command_line)s"; %(error_message)s'
+                ) % {
+                    'command_line': ' '.join(command_line),
+                    'error_message': error_message
+                }
+                self.get_model_instance().error_log.create(text=message)
+                raise SourceException(message)
+            else:
+                stdout_file_object.seek(0)
+                self.get_model_instance().error_log.all().delete()
+                return stdout_file_object
+
+    def get_upload_file_object(self, form_data):
+        arguments = [
+            '-d', self.kwargs['device_name'], '--format', 'tiff',
+        ]
+
+        if self.kwargs['adf_mode']:
+            arguments.extend(
+                ['--adf-mode', self.kwargs['adf_mode']]
+            )
+
+        if self.kwargs['mode']:
+            arguments.extend(
+                ['--mode', self.kwargs['mode']]
+            )
+
+        if self.kwargs['resolution']:
+            arguments.extend(
+                ['--resolution', '{}'.format(self.kwargs['resolution'])]
+            )
+
+        if self.kwargs['source']:
+            arguments.extend(
+                ['--source', self.kwargs['source']]
+            )
+
+        print("@@@@@@@@@@@@@@@@ arguments", arguments)
+
+        file_object = self.execute_command(arguments=arguments)
+
+        return SourceUploadedFile(
+            source=self, file=PseudoFile(
+                file=file_object, name='scan {}'.format(now())
+            )
+        )
+
+    def get_view_context(self, context, request):
+        return {
+            'subtemplates_list': [
+                {
+                    'name': 'sources/upload_multiform_subtemplate.html',
+                    'context': {
+                        'forms': context['forms'],
+                        'is_multipart': True,
+                        'title': _('Document properties'),
+                        'submit_label': _('Scan'),
+                    },
+                }
+            ]
+        }
+
 
 class SourceBackendStagingFolder(SourceBackend):
     can_compress = True
     field_order = ('uncompress', 'folder_path')
     fields = {
         'uncompress': {
-            'label': _('Uncompress'),
             'class': 'django.forms.ChoiceField', 'default': '',
             'help_text': _(
                 'Whether to expand or not compressed archives.'
-            ), 'kwargs': {
+            ),
+            'kwargs': {
                 'choices': SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-            }, 'required': True
+            },
+            'label': _('Uncompress'),
+            'required': True
         },
         'folder_path': {
-            'label': _('Folder path'),
             'class': 'django.forms.CharField', 'default': '',
             'help_text': _(
                 'Server side filesystem path.'
-            ), 'kwargs': {
+            ),
+            'kwargs': {
                 'max_length': 255,
-            }, 'required': True
+            },
+            'label': _('Folder path'),
+            'required': True
         }
     }
+    icon_staging_folder_file = Icon(driver_name='fontawesome', symbol='file')
     is_interactive = True
     label = _('Staging folder')
     upload_form_class = StagingUploadForm
@@ -284,11 +428,86 @@ class SourceBackendStagingFolder(SourceBackend):
             }
         }
     }
+
+    def clean_up_upload_file(self, upload_file_object):
+        if self.kwargs['delete_after_upload']:
+            try:
+                upload_file_object.extra_data.delete()
+            except Exception as exception:
+                logger.error(
+                    'Error deleting staging file: %s; %s',
+                    upload_file_object, exception
+                )
+                raise Exception(
+                    _('Error deleting staging file; %s') % exception
+                )
+
+    def get_file(self, *args, **kwargs):
+        return StagingFile(staging_folder=self, *args, **kwargs)
+
+    def get_files(self):
+        try:
+            for entry in sorted([os.path.normcase(f) for f in os.listdir(self.kwargs['folder_path']) if os.path.isfile(os.path.join(self.kwargs['folder_path'], f))]):
+                yield self.get_file(filename=entry)
+        except OSError as exception:
+            logger.error(
+                'Unable get list of staging files from source: %s; %s',
+                self, exception
+            )
+            raise Exception(
+                _('Unable get list of staging files: %s') % exception
+            )
+
+    def get_upload_file_object(self, form_data):
+        staging_file = self.get_file(
+            encoded_filename=form_data['staging_file_id']
+        )
+        return SourceUploadedFile(
+            source=self, file=staging_file.as_file(), extra_data=staging_file
+        )
+
+    def get_view_context(self, context, request):
+        #staging_filelist = []
+
+        #try:
+        staging_filelist = list(self.get_files())
+
+        #except Exception:# as exception:
+        #    raise
+        #    messages.error(message=exception, request=request)
+        #finally:
+        subtemplates_list = [
+            {
+                'name': 'appearance/generic_multiform_subtemplate.html',
+                'context': {
+                    'forms': context['forms'],
+                    'title': _('Document properties'),
+                },
+            },
+            {
+                'name': 'appearance/generic_list_subtemplate.html',
+                'context': {
+                    'hide_link': True,
+                    'no_results_icon': SourceBackendStagingFolder.icon_staging_folder_file,
+                    'no_results_text': _(
+                        'This could mean that the staging folder is '
+                        'empty. It could also mean that the '
+                        'operating system user account being used '
+                        'for Mayan EDMS doesn\'t have the necessary '
+                        'file system permissions for the folder.'
+                    ),
+                    'no_results_title': _(
+                        'No staging files available'
+                    ),
+                    'object_list': staging_filelist,
+                    'title': _('Files in staging path'),
+                }
+            },
+        ]
+
+        return {'subtemplates_list': subtemplates_list}
+
     '''
-    folder_path = models.CharField(
-        max_length=255, help_text=_('Server side filesystem path.'),
-        verbose_name=_('Folder path')
-    )
     preview_width = models.IntegerField(
         help_text=_('Width value to be passed to the converter backend.'),
         verbose_name=_('Preview width')
@@ -313,36 +532,45 @@ class SourceBackendStagingFolder(SourceBackend):
     '''
 
 
-
 class SourceBackendWatchFolder(SourceBackend):
     can_compress = True
     field_order = ('interval', 'uncompress', 'folder_path')
     fields = {
         'interval': {
-            'label': _('Interval'),
             'class': 'django.forms.IntegerField',
             'default': DEFAULT_INTERVAL,
             'help_text': _(
                 'Interval in seconds between checks for new documents.'
-            ), 'required': True
+            ),
+            'kwargs': {
+                'min_value': 0
+            },
+            'label': _('Interval'),
+            'required': True
         },
         'uncompress': {
-            'label': _('Uncompress'),
-            'class': 'django.forms.ChoiceField', 'default': '',
+            'class': 'django.forms.ChoiceField',
+            'default': '',
             'help_text': _(
                 'Whether to expand or not compressed archives.'
-            ), 'kwargs': {
+            ),
+            'kwargs': {
                 'choices': SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-            }, 'required': True
+            },
+            'label': _('Uncompress'),
+            'required': True
         },
         'folder_path': {
-            'label': _('Folder path'),
-            'class': 'django.forms.CharField', 'default': '',
+            'class': 'django.forms.CharField',
+            'default': '',
             'help_text': _(
                 'Server side filesystem path.'
-            ), 'kwargs': {
+            ),
+            'kwargs': {
                 'max_length': 255,
-            }, 'required': True
+            },
+            'label': _('Folder path'),
+            'required': True
         }
     }
     label = _('Watch folder')
@@ -406,7 +634,7 @@ class SourceBackendWebForm(SourceBackend):
     }
     is_interactive = True
     label = _('Web form')
-    upload_form_class = WebFormUploadForm
+    upload_form_class = WebFormUploadFormHTML5
     widgets = {
         'uncompress': {
             'class': 'django.forms.widgets.Select', 'kwargs': {
@@ -415,11 +643,30 @@ class SourceBackendWebForm(SourceBackend):
         }
     }
 
-    def __init__(self, model_instance_id, **kwargs):
-        self.model_instance_id = model_instance_id
-
     def get_upload_file_object(self, form_data):
         return SourceUploadedFile(
             source=self.model_instance_id, file=form_data['file']
         )
 
+    def get_view_context(self, context, request):
+        return {
+            'subtemplates_list': [
+                {
+                    'name': 'sources/upload_multiform_subtemplate.html',
+                    'context': {
+                        'forms': context['forms'],
+                        'is_multipart': True,
+                        'title': _('Document properties'),
+                        'form_action': '{}?{}'.format(
+                            reverse(
+                                viewname=request.resolver_match.view_name,
+                                kwargs=request.resolver_match.kwargs
+                            ), request.META['QUERY_STRING']
+                        ),
+                        'form_css_classes': 'dropzone',
+                        'form_disable_submit': True,
+                        'form_id': 'html5upload',
+                    },
+                }
+            ]
+        }

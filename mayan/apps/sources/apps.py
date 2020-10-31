@@ -14,7 +14,7 @@ from mayan.apps.logging.classes import ErrorLog
 from mayan.apps.navigation.classes import SourceColumn
 from mayan.apps.views.html_widgets import TwoStateWidget
 from mayan.apps.common.menus import (
-    menu_list_facet, menu_object, menu_secondary, menu_setup
+    menu_list_facet, menu_object, menu_related, menu_secondary, menu_setup
 )
 
 from .classes import SourceBackend, StagingFile
@@ -25,13 +25,15 @@ from .handlers import (
     handler_initialize_periodic_tasks
 )
 from .links import (
-    link_document_create_multiple, link_setup_sources,
-    link_setup_source_check_now, link_setup_source_create_imap_email,
-    link_setup_source_create_pop3_email, link_setup_source_create_sane_scanner,
-    link_setup_source_create_watch_folder, link_setup_source_create_webform,
-    link_setup_source_create_staging_folder, link_setup_source_delete,
-    link_setup_source_edit, link_staging_file_delete,
-    link_document_file_upload
+    link_document_create_multiple, link_source_check,
+    link_source_backend_selection, link_source_delete, link_source_edit,
+    link_source_list, link_staging_file_delete, link_document_file_upload
+)
+##TODO: register permission, use in views and add tests
+#ZTODO: add ACL, event and notification links
+from .permissions import (
+    permission_sources_delete, permission_sources_edit,
+    permission_sources_view
 )
 from .widgets import StagingFileThumbnailWidget
 
@@ -55,22 +57,12 @@ class SourcesApp(MayanAppConfig):
             app_label='documents', model_name='DocumentType'
         )
 
-        #IMAPEmail = self.get_model(model_name='IMAPEmail')
-        #POP3Email = self.get_model(model_name='POP3Email')
         Source = self.get_model(model_name='Source')
-        #SaneScanner = self.get_model(model_name='SaneScanner')
-        #StagingFolderSource = self.get_model(model_name='StagingFolderSource')
-        #WatchFolderSource = self.get_model(model_name='WatchFolderSource')
-        #ebFormSource = self.get_model(model_name='WebFormSource')
 
         SourceBackend.load_modules()
 
         error_log = ErrorLog(app_config=self)
         error_log.register_model(model=Source)
-        #error_log.register_model(model=IMAPEmail)
-        #error_log.register_model(model=POP3Email)
-        #error_log.register_model(model=SaneScanner)
-        #error_log.register_model(model=WatchFolderSource)
 
         MissingItem(
             label=_('Create a document source'),
@@ -80,7 +72,7 @@ class SourcesApp(MayanAppConfig):
                 'be able to upload documents from a browser.'
             ),
             condition=lambda: not Source.objects.exists(),
-            view='sources:setup_source_list'
+            view='sources:source_list'
         )
 
         SourceColumn(
@@ -88,8 +80,8 @@ class SourcesApp(MayanAppConfig):
             source=Source
         )
         SourceColumn(
-            attribute='get_backend_label', include_label=True, label=_('Type'),
-            source=Source
+            attribute='get_backend_label', include_label=True,
+            label=_('Type'), source=Source
         )
         SourceColumn(
             attribute='enabled', include_label=True, is_sortable=True,
@@ -118,47 +110,43 @@ class SourcesApp(MayanAppConfig):
                 link_transformation_list,
             ), sources=(
                 Source,
-                #POP3Email, IMAPEmail, SaneScanner, StagingFolderSource,
-                #WatchFolderSource, WebFormSource
             )
         )
 
         menu_object.bind_links(
             links=(
-                link_setup_source_delete, link_setup_source_edit
+                link_source_delete, link_source_edit
             ), sources=(
                 Source,
-                #POP3Email, IMAPEmail, SaneScanner, StagingFolderSource,
-                #WatchFolderSource, WebFormSource
             )
         )
         menu_object.bind_links(
             links=(link_staging_file_delete,), sources=(StagingFile,)
         )
         menu_object.bind_links(
-            links=(link_setup_source_check_now,),
-            sources=(Source,)#IMAPEmail, POP3Email, WatchFolderSource,)
+            links=(link_source_check,),
+            sources=(Source,)
+        )
+        menu_related.bind_links(
+            links=(
+                link_source_list,
+            ), sources=(
+                Source,
+                'sources:source_backend_selection', 'sources:source_create',
+                'sources:source_list'
+            )
         )
         menu_secondary.bind_links(
             links=(
-                link_setup_sources,
-                #link_source_backend_selection,
-                #link_setup_source_create_webform,
-                #link_setup_source_create_sane_scanner,
-                #link_setup_source_create_staging_folder,
-                #link_setup_source_create_pop3_email,
-                #link_setup_source_create_imap_email,
-                #link_setup_source_create_watch_folder
+                #link_source_list,
+                link_source_backend_selection,
             ), sources=(
                 Source,
-                #POP3Email, IMAPEmail, StagingFolderSource, WatchFolderSource,
-                #WebFormSource, 'sources:setup_source_list',
-                'sources:setup_source_list',
-                'sources:source_create',
-                'sources:source_backend_selection'
+                'sources:source_backend_selection', 'sources:source_create',
+                'sources:source_list'
             )
         )
-        menu_setup.bind_links(links=(link_setup_sources,))
+        menu_setup.bind_links(links=(link_source_list,))
         menu_secondary.bind_links(
             links=(link_document_file_upload,),
             sources=(

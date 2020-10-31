@@ -1,7 +1,7 @@
 import logging
 
 from django.contrib import messages
-from django.http import HttpResponseRedirect, JsonResponse
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.encoding import force_text
@@ -12,163 +12,20 @@ from mayan.apps.documents.models import (
     DocumentType, Document, DocumentFile
 )
 from mayan.apps.documents.permissions import permission_document_create
-from mayan.apps.navigation.classes import Link
 from mayan.apps.storage.models import SharedUploadedFile
-from mayan.apps.views.generics import MultiFormView
 
 from ..exceptions import SourceException
-from ..forms import (
-    NewDocumentForm, WebFormUploadForm, WebFormUploadFormHTML5
-)
-from ..icons import icon_staging_folder_file, icon_upload_view_link
+from ..forms import NewDocumentForm
 from ..literals import SOURCE_UNCOMPRESS_CHOICE_ASK, SOURCE_UNCOMPRESS_CHOICE_Y
-from ..links import factory_conditional_active_by_source
-from ..menus import menu_sources
-from ..models import Source
-from ..sources import SourceBackendSANEScanner, SourceBackendStagingFolder
 from ..tasks import task_source_handle_upload
-#from ..utils import get_upload_form_class
 
-__all__ = ('UploadBaseView', 'UploadInteractiveView')
+from .base import UploadBaseView
+
+__all__ = ('UploadBaseView', 'DocumentUploadInteractiveView')
 logger = logging.getLogger(name=__name__)
 
 
-class UploadBaseView(MultiFormView):
-    prefixes = {'source_form': 'source', 'document_form': 'document'}
-    template_name = 'appearance/generic_form.html'
-
-    @staticmethod
-    def get_active_tab_links(document=None):
-        return [
-            UploadBaseView.get_tab_link_for_source(
-                source=source, document=document
-            )
-            for source in Source.objects.interactive().filter(enabled=True)
-        ]
-
-    @staticmethod
-    def get_tab_link_for_source(source, document=None):
-        if document:
-            view = 'sources:document_file_upload'
-            args = ('"{}"'.format(document.pk), '"{}"'.format(source.pk),)
-        else:
-            view = 'sources:document_upload_interactive'
-            args = ('"{}"'.format(source.pk),)
-
-        return Link(
-            args=args,
-            conditional_active=factory_conditional_active_by_source(
-                source=source
-            ), icon_class=icon_upload_view_link, keep_query=True,
-            remove_from_query=['page'], text=source.label, view=view
-        )
-
-    def dispatch(self, request, *args, **kwargs):
-        #interactive_sources_ids = []
-        #for source in Source.objects.filter(enabled=True):
-        #    if getattr(source.get_backend(), 'is_interactive', False):
-        #        interactive_sources_ids.append(source.pk)
-
-        #interactive_sources = Source.objects.filter(
-        #    id__in=interactive_sources_ids
-        #)
-        interactive_sources = Source.objects.interactive().filter(enabled=True)
-
-        if not interactive_sources.exists():
-            messages.error(
-                message=_(
-                    'No interactive document sources have been defined or '
-                    'none have been enabled, create one before proceeding.'
-                ), request=request
-            )
-            return HttpResponseRedirect(
-                redirect_to=reverse(viewname='sources:setup_source_list')
-            )
-
-        if 'source_id' in kwargs:
-            self.source = get_object_or_404(
-                klass=interactive_sources,
-                pk=kwargs['source_id']
-            )
-        else:
-            self.source = interactive_sources.first()
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        subtemplates_list = []
-
-        context['source'] = self.source
-
-        if isinstance(self.source.get_backend(), SourceBackendStagingFolder):
-            try:
-                staging_filelist = list(self.source.get_files())
-            except Exception as exception:
-                messages.error(message=exception, request=self.request)
-                staging_filelist = []
-            finally:
-                subtemplates_list = [
-                    {
-                        'name': 'appearance/generic_multiform_subtemplate.html',
-                        'context': {
-                            'forms': context['forms'],
-                            'title': _('Document properties'),
-                        }
-                    },
-                    {
-                        'name': 'appearance/generic_list_subtemplate.html',
-                        'context': {
-                            'hide_link': True,
-                            'no_results_icon': icon_staging_folder_file,
-                            'no_results_text': _(
-                                'This could mean that the staging folder is '
-                                'empty. It could also mean that the '
-                                'operating system user account being used '
-                                'for Mayan EDMS doesn\'t have the necessary '
-                                'file system permissions for the folder.'
-                            ),
-                            'no_results_title': _(
-                                'No staging files available'
-                            ),
-                            'object_list': staging_filelist,
-                            'title': _('Files in staging path'),
-                        }
-                    },
-                ]
-        elif isinstance(self.source.get_backend(), SourceBackendSANEScanner):
-            subtemplates_list.append({
-                'name': 'sources/upload_multiform_subtemplate.html',
-                'context': {
-                    'forms': context['forms'],
-                    'is_multipart': True,
-                    'title': _('Document properties'),
-                    'submit_label': _('Scan'),
-                },
-            })
-        else:
-            subtemplates_list.append({
-                'name': 'sources/upload_multiform_subtemplate.html',
-                'context': {
-                    'forms': context['forms'],
-                    'is_multipart': True,
-                    'title': _('Document properties'),
-                },
-            })
-
-        menu_sources.bound_links['sources:document_upload_interactive'] = self.tab_links
-        menu_sources.bound_links['sources:document_file_upload'] = self.tab_links
-
-        context.update(
-            {
-                'subtemplates_list': subtemplates_list,
-            }
-        )
-
-        return context
-
-
-class UploadInteractiveView(UploadBaseView):
+class DocumentUploadInteractiveView(UploadBaseView):
     def create_source_form_form(self, **kwargs):
         if hasattr(self.source, 'uncompress'):
             show_expand = self.source.uncompress == SOURCE_UNCOMPRESS_CHOICE_ASK
@@ -207,15 +64,7 @@ class UploadInteractiveView(UploadBaseView):
 
         self.tab_links = UploadBaseView.get_active_tab_links()
 
-        try:
-            return super().dispatch(request, *args, **kwargs)
-        except Exception as exception:
-            if request.is_ajax():
-                return JsonResponse(
-                    data={'error': force_text(s=exception)}, status=500
-                )
-            else:
-                raise
+        return super().dispatch(request, *args, **kwargs)
 
     def forms_valid(self, forms):
         if getattr(self.source.get_backend(), 'can_compress', False):
@@ -240,17 +89,17 @@ class UploadInteractiveView(UploadBaseView):
                 file=uploaded_file.file
             )
 
+            try:
+                self.source.clean_up_upload_file(uploaded_file)
+            except Exception as exception:
+                messages.error(message=exception, request=self.request)
+
             if not self.request.user.is_anonymous:
                 user = self.request.user
                 user_id = self.request.user.pk
             else:
                 user = None
                 user_id = None
-
-            try:
-                self.source.clean_up_upload_file(uploaded_file)
-            except Exception as exception:
-                messages.error(message=exception, request=self.request)
 
             querystring = self.request.GET.copy()
             querystring.update(self.request.POST)
@@ -319,31 +168,10 @@ class UploadInteractiveView(UploadBaseView):
             'source: %(source)s'
         ) % {'document_type': self.document_type, 'source': self.source.label}
 
-        if not isinstance(self.source.get_backend(), SourceBackendStagingFolder) and not isinstance(self.source.get_backend(), SourceBackendSANEScanner):
-            context['subtemplates_list'][0]['context'].update(
-                {
-                    'form_action': '{}?{}'.format(
-                        reverse(
-                            viewname=self.request.resolver_match.view_name,
-                            kwargs=self.request.resolver_match.kwargs
-                        ), self.request.META['QUERY_STRING']
-                    ),
-                    'form_css_classes': 'dropzone',
-                    'form_disable_submit': True,
-                    'form_id': 'html5upload',
-                }
-            )
         return context
 
     def get_form_classes(self):
-        #source_form_class = get_upload_form_class(
-        #    source_type_name=self.source.source_type
-        #)
         source_form_class = self.source.get_backend().upload_form_class
-
-        # Override source form class to enable the HTML5 file uploader
-        if source_form_class == WebFormUploadForm:
-            source_form_class = WebFormUploadFormHTML5
 
         return {
             'document_form': NewDocumentForm,

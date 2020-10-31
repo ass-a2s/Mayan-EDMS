@@ -17,7 +17,8 @@ from ..exceptions import SourceException
 from ..literals import (
     DEFAULT_IMAP_MAILBOX, DEFAULT_IMAP_SEARCH_CRITERIA,
     DEFAULT_IMAP_STORE_COMMANDS, DEFAULT_METADATA_ATTACHMENT_NAME,
-    DEFAULT_POP3_TIMEOUT, SOURCE_CHOICE_EMAIL_IMAP, SOURCE_CHOICE_EMAIL_POP3,
+    DEFAULT_POP3_TIMEOUT,
+    #SOURCE_CHOICE_EMAIL_IMAP, SOURCE_CHOICE_EMAIL_POP3,
     SOURCE_UNCOMPRESS_CHOICE_N, SOURCE_UNCOMPRESS_CHOICE_Y,
 )
 
@@ -209,7 +210,7 @@ class EmailBaseModel(IntervalBaseModel):
 
 
 class IMAPEmail(EmailBaseModel):
-    source_type = SOURCE_CHOICE_EMAIL_IMAP
+    #source_type = SOURCE_CHOICE_EMAIL_IMAP
 
     mailbox = models.CharField(
         default=DEFAULT_IMAP_MAILBOX,
@@ -343,7 +344,7 @@ class IMAPEmail(EmailBaseModel):
 
 
 class POP3Email(EmailBaseModel):
-    source_type = SOURCE_CHOICE_EMAIL_POP3
+    #source_type = SOURCE_CHOICE_EMAIL_POP3
 
     timeout = models.PositiveIntegerField(
         default=DEFAULT_POP3_TIMEOUT, verbose_name=_('Timeout')

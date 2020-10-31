@@ -164,7 +164,7 @@ class DocumentCreateWizard(SessionWizardView):
                 ), request=request
             )
             return HttpResponseRedirect(
-                redirect_to=reverse(viewname='sources:setup_source_list')
+                redirect_to=reverse(viewname='sources:source_list')
             )
 
         return super().dispatch(request, *args, **kwargs)

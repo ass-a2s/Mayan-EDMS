@@ -14,8 +14,8 @@ from mayan.apps.testing.tests.base import GenericViewTestCase
 from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
 from ..models import WebFormSource
 from ..permissions import (
-    permission_sources_setup_create, permission_sources_setup_delete,
-    permission_sources_setup_edit, permission_sources_setup_view,
+    permission_sources_create, permission_sources_delete,
+    permission_sources_edit, permission_sources_view,
     permission_staging_file_delete
 )
 
@@ -259,7 +259,7 @@ class SourcesViewTestCase(
     def test_source_check_get_view_with_permission(self):
         self._create_test_source()
 
-        self.grant_permission(permission=permission_sources_setup_create)
+        self.grant_permission(permission=permission_sources_create)
 
         response = self._request_setup_source_check_get_view()
         self.assertEqual(response.status_code, 200)
@@ -271,7 +271,7 @@ class SourcesViewTestCase(
         self.assertEqual(WebFormSource.objects.count(), 0)
 
     def test_source_create_view_with_permission(self):
-        self.grant_permission(permission=permission_sources_setup_create)
+        self.grant_permission(permission=permission_sources_create)
 
         response = self._request_setup_source_create_view()
         self.assertEqual(response.status_code, 302)
@@ -291,7 +291,7 @@ class SourcesViewTestCase(
     def test_source_delete_view_with_permission(self):
         self._create_test_source()
 
-        self.grant_permission(permission=permission_sources_setup_delete)
+        self.grant_permission(permission=permission_sources_delete)
 
         response = self._request_setup_source_delete_view()
         self.assertEqual(response.status_code, 302)
@@ -319,7 +319,7 @@ class SourcesViewTestCase(
         test_instance_values = self._model_instance_to_dictionary(
             instance=self.test_source
         )
-        self.grant_permission(permission=permission_sources_setup_edit)
+        self.grant_permission(permission=permission_sources_edit)
 
         response = self._request_setup_source_edit_view()
         self.assertEqual(response.status_code, 302)
@@ -340,7 +340,7 @@ class SourcesViewTestCase(
     def test_source_list_view_with_permission(self):
         self._create_test_source()
 
-        self.grant_permission(permission=permission_sources_setup_view)
+        self.grant_permission(permission=permission_sources_view)
 
         response = self._request_setup_source_list_view()
         self.assertContains(
@@ -398,7 +398,7 @@ class WatchFolderErrorLoggingViewTestCase(
         self.test_watch_folder.folder_path = 'invalid_path'
         self.test_watch_folder.save()
 
-        self.grant_permission(permission=permission_sources_setup_create)
+        self.grant_permission(permission=permission_sources_create)
 
         self._silence_logger(name='mayan.apps.sources.tasks')
 

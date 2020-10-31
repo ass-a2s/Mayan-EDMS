@@ -11,9 +11,9 @@ IMPORT_ERROR_EXCLUSION_TEXTS = (
 
 class BackendModelMixin(models.Model):
     backend_path = models.CharField(
-        max_length=128,
-        help_text=_('The dotted Python path to the backend class.'),
-        verbose_name=_('Backend path')
+        max_length=128, help_text=_(
+            'The dotted Python path to the backend class.'
+        ), verbose_name=_('Backend path')
     )
     backend_data = models.TextField(
         blank=True, verbose_name=_('Backend data')
