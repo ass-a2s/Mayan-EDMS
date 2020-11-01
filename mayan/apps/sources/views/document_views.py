@@ -26,25 +26,6 @@ logger = logging.getLogger(name=__name__)
 
 
 class DocumentUploadInteractiveView(UploadBaseView):
-    def create_form__source_form(self, **kwargs):
-        show_expand = self.source.get_backend_instance().kwargs.get('uncompress') == SOURCE_UNCOMPRESS_CHOICE_ASK
-
-        return self.get_form_classes()['source_form'](
-            prefix=kwargs['prefix'],
-            source=self.source,
-            show_expand=show_expand,
-            data=kwargs.get('data', None),
-            files=kwargs.get('files', None),
-        )
-
-    def create_form__document_form(self, **kwargs):
-        return self.get_form_classes()['document_form'](
-            prefix=kwargs['prefix'],
-            document_type=self.document_type,
-            data=kwargs.get('data', None),
-            files=kwargs.get('files', None),
-        )
-
     def dispatch(self, request, *args, **kwargs):
         self.subtemplates_list = []
 
@@ -64,7 +45,7 @@ class DocumentUploadInteractiveView(UploadBaseView):
         return super().dispatch(request, *args, **kwargs)
 
     def forms_valid(self, forms):
-        if getattr(self.source.get_backend(), 'can_compress', False):
+        if getattr(self.source.get_backend(), 'can_uncompress', False):
             if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
                 expand = forms['source_form'].cleaned_data.get('expand')
             else:
@@ -144,8 +125,8 @@ class DocumentUploadInteractiveView(UploadBaseView):
             else:
                 messages.success(
                     message=_(
-                        'New document queued for upload and will be available '
-                        'shortly.'
+                        'New document queued for upload and will be '
+                        'available shortly.'
                     ), request=self.request
                 )
 
@@ -179,4 +160,19 @@ class DocumentUploadInteractiveView(UploadBaseView):
             'document_form': NewDocumentForm,
             'source_form': self.source.get_backend().upload_form_class
 
+        }
+
+    def get_form_extra_kwargs__document_form(self):
+        return {
+            'document_type': self.document_type,
+        }
+
+    def get_form_extra_kwargs__source_form(self):
+        show_expand = self.source.get_backend_instance().kwargs.get(
+            'uncompress'
+        ) == SOURCE_UNCOMPRESS_CHOICE_ASK
+
+        return {
+            'source': self.source,
+            'show_expand': show_expand,
         }

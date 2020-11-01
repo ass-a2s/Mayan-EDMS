@@ -24,15 +24,6 @@ logger = logging.getLogger(name=__name__)
 
 
 class DocumentFileUploadInteractiveView(UploadBaseView):
-    def create_source_form_form(self, **kwargs):
-        return self.get_form_classes()['source_form'](
-            prefix=kwargs['prefix'],
-            source=self.source,
-            show_expand=False,
-            data=kwargs.get('data', None),
-            files=kwargs.get('files', None),
-        )
-
     def dispatch(self, request, *args, **kwargs):
         self.subtemplates_list = []
 
@@ -175,11 +166,16 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
 
         return context
 
-    def get_document_form_initial(self):
-        return {'action': DOCUMENT_FILE_ACTION_PAGES_NEW}
-
     def get_form_classes(self):
         return {
             'document_form': NewFileForm,
             'source_form': self.source.get_backend().upload_form_class
         }
+
+    def get_form_extra_kwargs__source_form(self, **kwargs):
+        return {
+            'source': self.source,
+        }
+
+    def get_initial__document_form(self):
+        return {'action': DOCUMENT_FILE_ACTION_PAGES_NEW}

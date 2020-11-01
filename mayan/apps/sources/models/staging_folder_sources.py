@@ -27,7 +27,7 @@ class StagingFolderSource(InteractiveSource):
     convert the scanned files into Mayan EDMS documents. Staging folders are
     useful when many users share a few networked scanners.
     """
-    can_compress = True
+    can_uncompress = True
     is_interactive = True
     #source_type = SOURCE_CHOICE_STAGING
 

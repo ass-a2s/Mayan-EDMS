@@ -75,7 +75,9 @@ class Source(BackendModelMixin, models.Model):
         """
         documents = []
         if not document_type:
-            document_type = self.document_type
+            document_type = DocumentType.objects.get(
+                pk=self.get_backend_data()['document_type_id']
+            )
 
         kwargs = {
             'description': description, 'document_type': document_type,

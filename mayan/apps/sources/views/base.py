@@ -51,9 +51,11 @@ class UploadBaseView(MultiFormView):
         )
 
     def dispatch(self, request, *args, **kwargs):
-        self.interactive_sources = Source.objects.interactive().filter(enabled=True)
+        self.interactive_sources_enabled = Source.objects.interactive().filter(
+            enabled=True
+        )
 
-        if not self.interactive_sources.exists():
+        if not self.interactive_sources_enabled.exists():
             messages.error(
                 message=_(
                     'No interactive document sources have been defined or '
@@ -90,21 +92,25 @@ class UploadBaseView(MultiFormView):
             )
         )
 
-        menu_sources.bound_links['sources:document_upload_interactive'] = self.tab_links
-        menu_sources.bound_links['sources:document_file_upload'] = self.tab_links
+        menu_sources.bound_links[
+            'sources:document_upload_interactive'
+        ] = self.tab_links
+        menu_sources.bound_links[
+            'sources:document_file_upload'
+        ] = self.tab_links
 
         return context
 
     def get_source(self):
         if 'source_id' in self.kwargs:
             return get_object_or_404(
-                klass=self.interactive_sources,
+                klass=self.interactive_sources_enabled,
                 pk=self.kwargs['source_id']
             )
         else:
-            return interactive_sources.first()
+            return self.interactive_sources_enabled.first()
     #def get_form_extra_kwargs(self, form_name):
-    #    return  {'show_expand': True}#backend_instance.can_compress
+    #    return  {'show_expand': True}#backend_instance.can_uncompress
 
     #def get_source_form_initial(self):
     #    return {'show_expand': True}

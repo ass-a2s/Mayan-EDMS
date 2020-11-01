@@ -22,7 +22,7 @@ logger = logging.getLogger(name=__name__)
 
 
 class SaneScanner(InteractiveSource):
-    can_compress = False
+    can_uncompress = False
     is_interactive = True
     #source_type = SOURCE_CHOICE_SANE_SCANNER
 

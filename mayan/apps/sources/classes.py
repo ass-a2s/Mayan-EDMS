@@ -140,7 +140,9 @@ class StagingFile:
 
     @property
     def cache_filename(self):
-        return '{}{}'.format(self.staging_folder.model_instance_id, self.encoded_filename)
+        return '{}{}'.format(
+            self.staging_folder.model_instance_id, self.encoded_filename
+        )
 
     def delete(self):
         self.storage.delete(self.cache_filename)
@@ -189,8 +191,8 @@ class StagingFile:
 
         # Set sensible defaults if the argument is not specified or if the
         # argument is None
-        width = self.staging_folder.preview_width
-        height = self.staging_folder.preview_height
+        width = self.staging_folder.kwargs.get('preview_width')
+        height = self.staging_folder.kwargs.get('preview_height')
 
         # Generate transformation hash
         transformation_list = []
@@ -210,7 +212,9 @@ class StagingFile:
         return time.ctime(os.path.getctime(self.get_full_path()))
 
     def get_full_path(self):
-        return os.path.join(self.staging_folder.kwargs['folder_path'], self.filename)
+        return os.path.join(
+            self.staging_folder.kwargs['folder_path'], self.filename
+        )
 
     def get_image(self, transformations=None):
         cache_filename = self.cache_filename

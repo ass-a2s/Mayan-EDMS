@@ -30,7 +30,9 @@ def task_check_interval_source(source_id, test=False):
     lock_id = 'task_check_interval_source-%d' % source_id
     try:
         logger.debug('trying to acquire lock: %s', lock_id)
-        lock = LockingBackend.get_instance().acquire_lock(lock_id, DEFAULT_SOURCE_LOCK_EXPIRE)
+        lock = LockingBackend.get_instance().acquire_lock(
+            name=lock_id, timeout=DEFAULT_SOURCE_LOCK_EXPIRE
+        )
     except LockError:
         logger.debug('unable to obtain lock: %s' % lock_id)
     else:
@@ -39,7 +41,7 @@ def task_check_interval_source(source_id, test=False):
         try:
             source = Source.objects.get(pk=source_id)
             if source.enabled or test:
-                source.check_source(test=test)
+                source.get_backend_instance().check_source(test=test)
         except Exception as exception:
             logger.error(
                 'Error processing source id: %s; %s', source_id, exception
@@ -51,18 +53,29 @@ def task_check_interval_source(source_id, test=False):
 
 
 @app.task()
-def task_generate_staging_file_image(staging_folder_pk, encoded_filename, *args, **kwargs):
-    StagingFolderSource = apps.get_model(
-        app_label='sources', model_name='StagingFolderSource'
+def task_generate_staging_file_image(
+    staging_folder_pk, encoded_filename, *args, **kwargs
+):
+    Source = apps.get_model(
+        app_label='sources', model_name='Source'
     )
-    staging_folder = StagingFolderSource.objects.get(pk=staging_folder_pk)
-    staging_file = staging_folder.get_file(encoded_filename=encoded_filename)
+    staging_folder = Source.objects.get(pk=staging_folder_pk)
+    staging_file = staging_folder.get_backend_instance().get_file(
+        encoded_filename=encoded_filename
+    )
 
     return staging_file.generate_image(*args, **kwargs)
 
 
-@app.task(bind=True, default_retry_delay=DEFAULT_SOURCE_TASK_RETRY_DELAY, ignore_result=True)
-def task_source_handle_upload(self, document_type_id, shared_uploaded_file_id, source_id, description=None, expand=False, label=None, language=None, querystring=None, skip_list=None, user_id=None):
+@app.task(
+    bind=True, default_retry_delay=DEFAULT_SOURCE_TASK_RETRY_DELAY,
+    ignore_result=True
+)
+def task_source_handle_upload(
+    self, document_type_id, shared_uploaded_file_id, source_id,
+    description=None, expand=False, label=None, language=None,
+    querystring=None, skip_list=None, user_id=None
+):
     DocumentType = apps.get_model(
         app_label='documents', model_name='DocumentType'
     )
@@ -159,8 +172,15 @@ def task_source_handle_upload(self, document_type_id, shared_uploaded_file_id, s
             )
 
 
-@app.task(bind=True, default_retry_delay=DEFAULT_SOURCE_TASK_RETRY_DELAY, ignore_result=True)
-def task_upload_document(self, source_id, document_type_id, shared_uploaded_file_id, description=None, label=None, language=None, querystring=None, user_id=None):
+@app.task(
+    bind=True, default_retry_delay=DEFAULT_SOURCE_TASK_RETRY_DELAY,
+    ignore_result=True
+)
+def task_upload_document(
+    self, source_id, document_type_id, shared_uploaded_file_id,
+    description=None, label=None, language=None, querystring=None,
+    user_id=None
+):
     DocumentType = apps.get_model(
         app_label='documents', model_name='DocumentType'
     )
