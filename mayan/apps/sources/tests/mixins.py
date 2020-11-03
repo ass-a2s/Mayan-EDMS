@@ -1,4 +1,7 @@
+import json
 import shutil
+
+from django.db.models import Q
 
 from mayan.apps.documents.literals import DOCUMENT_FILE_ACTION_PAGES_NEW
 from mayan.apps.documents.tests.literals import (
@@ -6,21 +9,24 @@ from mayan.apps.documents.tests.literals import (
 )
 from mayan.apps.storage.utils import fs_cleanup, mkdtemp
 
-from ..literals import SOURCE_CHOICE_WEB_FORM, SOURCE_UNCOMPRESS_CHOICE_Y
-from ..models.staging_folder_sources import StagingFolderSource
-from ..models.watch_folder_sources import WatchFolderSource
-from ..models.webform_sources import WebFormSource
+from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
+from ..models import Source
+#from ..models.staging_folder_sources import StagingFolderSource
+#from ..models.watch_folder_sources import WatchFolderSource
+#from ..models.webform_sources import WebFormSource
 
 from .literals import (
     TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_SOURCE_UNCOMPRESS_N,
     TEST_STAGING_PREVIEW_WIDTH
 )
 
+TEST_SOURCE_BACKEND_PATH = 'mayan.apps.sources.sources.SourceBackendWebForm'
+
 
 class DocumentUploadIssueTestMixin:
     def _request_test_source_create_view(self):
         return self.post(
-            viewname='sources:setup_source_create', kwargs={
+            viewname='sources:source_create', kwargs={
                 'source_type_name': SOURCE_CHOICE_WEB_FORM
             }, data={
                 'enabled': True, 'label': 'test', 'uncompress': 'n'
@@ -202,65 +208,66 @@ class StagingFolderViewTestMixin:
         )
 
 
-class SourceTestMixin:
-    auto_create_test_source = True
-
-    def setUp(self):
-        super().setUp()
-        if self.auto_create_test_source:
-            self._create_test_source()
-
-    def _create_test_source(self):
-        self.test_source = WebFormSource.objects.create(
-            enabled=True, label=TEST_SOURCE_LABEL,
-            uncompress=TEST_SOURCE_UNCOMPRESS_N
-        )
-
-
 class SourceViewTestMixin:
-    def _request_setup_source_list_view(self):
-        return self.get(viewname='sources:source_list')
-
-    def _request_setup_source_check_get_view(self):
+    def _request_test_source_backend_selection_view(self):
         return self.get(
-            viewname='sources:setup_source_check', kwargs={
+            viewname='sources:source_backend_selection'
+        )
+
+    def _request_test_source_check_get_view(self):
+        return self.get(
+            viewname='sources:source_check', kwargs={
                 'source_id': self.test_source.pk
             }
         )
 
-    def _request_setup_source_check_post_view(self):
+    def _request_test_source_check_post_view(self):
         return self.post(
-            viewname='sources:setup_source_check', kwargs={
+            viewname='sources:source_check', kwargs={
                 'source_id': self.test_source.pk
             }
         )
 
-    def _request_setup_source_create_view(self):
-        return self.post(
+    def _request_test_source_create_view(self):
+        pk_list = list(Source.objects.values_list('pk', flat=True))
+
+        response = self.post(
             kwargs={
-                'source_type_name': SOURCE_CHOICE_WEB_FORM
-            }, viewname='sources:setup_source_create', data={
+                'backend_path': TEST_SOURCE_BACKEND_PATH
+            }, viewname='sources:source_create', data={
                 'enabled': True, 'label': TEST_SOURCE_LABEL,
                 'uncompress': TEST_SOURCE_UNCOMPRESS_N
             }
         )
 
-    def _request_setup_source_delete_view(self):
+        try:
+            self.test_source = Source.objects.get(~Q(pk__in=pk_list))
+        except Source.DoesNotExist:
+            self.test_source = None
+
+        return response
+
+    def _request_test_source_delete_view(self):
         return self.post(
-            viewname='sources:setup_source_delete', kwargs={
+            viewname='sources:source_delete', kwargs={
                 'source_id': self.test_source.pk
             }
         )
 
-    def _request_setup_source_edit_view(self):
+    def _request_test_source_edit_view(self):
         return self.post(
-            viewname='sources:setup_source_edit', kwargs={
+            viewname='sources:source_edit', kwargs={
                 'source_id': self.test_source.pk
             }, data={
                 'label': TEST_SOURCE_LABEL_EDITED,
-                'uncompress': self.test_source.uncompress
+                'uncompress': self.test_source.get_backend_data().get(
+                    'uncompress'
+                )
             }
         )
+
+    def _request_test_source_list_view(self):
+        return self.get(viewname='sources:source_list')
 
 
 class WatchFolderTestMixin:
@@ -278,4 +285,15 @@ class WatchFolderTestMixin:
             folder_path=self.temporary_directory,
             include_subdirectories=False,
             uncompress=SOURCE_UNCOMPRESS_CHOICE_Y
+        )
+
+
+class WebFormSourceTestMixin:
+    def _create_test_web_form_source(self):
+        self.test_source = Source.objects.create(
+            enabled=True, label=TEST_SOURCE_LABEL,
+            backend_path=TEST_SOURCE_BACKEND_PATH,
+            backend_data=json.dumps(
+                obj={'uncompress': TEST_SOURCE_UNCOMPRESS_N}
+            )
         )

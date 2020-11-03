@@ -12,7 +12,7 @@ from mayan.apps.documents.tests.literals import (
 from mayan.apps.testing.tests.base import GenericViewTestCase
 
 from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
-from ..models import WebFormSource
+from ..models import Source
 from ..permissions import (
     permission_sources_create, permission_sources_delete,
     permission_sources_edit, permission_sources_view,
@@ -23,13 +23,14 @@ from .literals import TEST_SOURCE_LABEL, TEST_SOURCE_UNCOMPRESS_N
 from .mixins import (
     DocumentFileUploadViewTestMixin, DocumentUploadIssueTestMixin,
     DocumentUploadWizardViewTestMixin, StagingFolderTestMixin,
-    StagingFolderViewTestMixin, SourceTestMixin, SourceViewTestMixin,
+    StagingFolderViewTestMixin, WebFormSourceTestMixin, SourceViewTestMixin,
     WatchFolderTestMixin
 )
 
 
+'''
 class DocumentUploadWizardViewTestCase(
-    SourceTestMixin, DocumentUploadWizardViewTestMixin,
+    WebFormSourceTestMixin, DocumentUploadWizardViewTestMixin,
     GenericDocumentViewTestCase
 ):
     auto_upload_test_document = False
@@ -170,7 +171,7 @@ class DocumentUploadIssueTestCase(
 
 
 class DocumentFileUploadViewTestCase(
-    DocumentFileUploadViewTestMixin, SourceTestMixin,
+    DocumentFileUploadViewTestMixin, WebFormSourceTestMixin,
     GenericDocumentViewTestCase
 ):
     def test_document_file_upload_view_no_permission(self):
@@ -243,68 +244,89 @@ class DocumentFileUploadViewTestCase(
             self.test_document.file_latest.filename,
             self.test_document_filename
         )
-
+'''
 
 class SourcesViewTestCase(
-    SourceTestMixin, SourceViewTestMixin, GenericViewTestCase
+    WebFormSourceTestMixin, SourceViewTestMixin, GenericViewTestCase
 ):
-    auto_create_test_source = False
 
     def test_source_check_get_view_no_permission(self):
-        self._create_test_source()
-
-        response = self._request_setup_source_check_get_view()
+        response = self._request_test_source_backend_selection_view()
         self.assertEqual(response.status_code, 404)
 
     def test_source_check_get_view_with_permission(self):
-        self._create_test_source()
+        self.grant_permission(permission=permission_sources_create)
+
+        response = self._request_test_source_backend_selection_view()
+        self.assertEqual(response.status_code, 200)
+
+    def test_source_check_get_view_no_permission(self):
+        self._create_test_web_form_source()
+
+        response = self._request_test_source_check_get_view()
+        self.assertEqual(response.status_code, 404)
+
+    def test_source_check_get_view_with_permission(self):
+        self._create_test_web_form_source()
 
         self.grant_permission(permission=permission_sources_create)
 
-        response = self._request_setup_source_check_get_view()
+        response = self._request_test_source_check_get_view()
         self.assertEqual(response.status_code, 200)
 
     def test_source_create_view_no_permission(self):
-        response = self._request_setup_source_create_view()
+        source_count = Source.objects.count()
+
+        response = self._request_test_source_create_view()
         self.assertEqual(response.status_code, 403)
 
-        self.assertEqual(WebFormSource.objects.count(), 0)
+        self.assertEqual(Source.objects.count(), source_count)
 
     def test_source_create_view_with_permission(self):
         self.grant_permission(permission=permission_sources_create)
 
-        response = self._request_setup_source_create_view()
+        source_count = Source.objects.count()
+
+        response = self._request_test_source_create_view()
         self.assertEqual(response.status_code, 302)
 
-        webform_source = WebFormSource.objects.first()
-        self.assertEqual(webform_source.label, TEST_SOURCE_LABEL)
-        self.assertEqual(webform_source.uncompress, TEST_SOURCE_UNCOMPRESS_N)
+        self.assertEqual(self.test_source.label, TEST_SOURCE_LABEL)
+        self.assertEqual(
+            self.test_source.get_backend_data()['uncompress'],
+            TEST_SOURCE_UNCOMPRESS_N
+        )
+
+        self.assertEqual(Source.objects.count(), source_count + 1)
 
     def test_source_delete_view_no_permission(self):
-        self._create_test_source()
+        self._create_test_web_form_source()
 
-        response = self._request_setup_source_delete_view()
+        source_count = Source.objects.count()
+
+        response = self._request_test_source_delete_view()
         self.assertEqual(response.status_code, 404)
 
-        self.assertEqual(WebFormSource.objects.count(), 1)
+        self.assertEqual(Source.objects.count(), source_count)
 
     def test_source_delete_view_with_permission(self):
-        self._create_test_source()
+        self._create_test_web_form_source()
 
         self.grant_permission(permission=permission_sources_delete)
 
-        response = self._request_setup_source_delete_view()
+        source_count = Source.objects.count()
+
+        response = self._request_test_source_delete_view()
         self.assertEqual(response.status_code, 302)
 
-        self.assertEqual(WebFormSource.objects.count(), 0)
+        self.assertEqual(Source.objects.count(), source_count - 1)
 
     def test_source_edit_view_no_permission(self):
-        self._create_test_source()
+        self._create_test_web_form_source()
         test_instance_values = self._model_instance_to_dictionary(
             instance=self.test_source
         )
 
-        response = self._request_setup_source_edit_view()
+        response = self._request_test_source_edit_view()
         self.assertEqual(response.status_code, 404)
 
         self.test_source.refresh_from_db()
@@ -315,13 +337,13 @@ class SourcesViewTestCase(
         )
 
     def test_source_edit_view_with_permission(self):
-        self._create_test_source()
+        self._create_test_web_form_source()
         test_instance_values = self._model_instance_to_dictionary(
             instance=self.test_source
         )
         self.grant_permission(permission=permission_sources_edit)
 
-        response = self._request_setup_source_edit_view()
+        response = self._request_test_source_edit_view()
         self.assertEqual(response.status_code, 302)
 
         self.test_source.refresh_from_db()
@@ -332,22 +354,22 @@ class SourcesViewTestCase(
         )
 
     def test_source_list_view_no_permission(self):
-        self._create_test_source()
+        self._create_test_web_form_source()
 
-        response = self._request_setup_source_list_view()
+        response = self._request_test_source_list_view()
         self.assertEqual(response.status_code, 200)
 
     def test_source_list_view_with_permission(self):
-        self._create_test_source()
+        self._create_test_web_form_source()
 
         self.grant_permission(permission=permission_sources_view)
 
-        response = self._request_setup_source_list_view()
+        response = self._request_test_source_list_view()
         self.assertContains(
             response=response, text=self.test_source.label, status_code=200
         )
 
-
+'''
 class StagingFolderViewTestCase(
     StagingFolderTestMixin, StagingFolderViewTestMixin, GenericViewTestCase
 ):
@@ -402,7 +424,7 @@ class WatchFolderErrorLoggingViewTestCase(
 
         self._silence_logger(name='mayan.apps.sources.tasks')
 
-        response = self._request_setup_source_check_post_view()
+        response = self._request_test_source_check_post_view()
         self.assertEqual(response.status_code, 302)
 
         self.assertEqual(self.test_watch_folder.error_log.count(), 1)
@@ -410,7 +432,8 @@ class WatchFolderErrorLoggingViewTestCase(
         self.test_watch_folder.folder_path = self.temporary_directory
         self.test_watch_folder.save()
 
-        response = self._request_setup_source_check_post_view()
+        response = self._request_test_source_check_post_view()
         self.assertEqual(response.status_code, 302)
 
         self.assertEqual(self.test_watch_folder.error_log.count(), 0)
+'''

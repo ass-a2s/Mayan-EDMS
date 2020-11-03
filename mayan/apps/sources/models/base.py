@@ -21,6 +21,7 @@ from ..wizards import WizardStep
 logger = logging.getLogger(name=__name__)
 
 
+#TODO: Move to managers.py
 class SourceManager(models.Manager):
     def interactive(self):
         interactive_sources_ids = []
@@ -38,7 +39,6 @@ class Source(BackendModelMixin, models.Model):
     )
     enabled = models.BooleanField(default=True, verbose_name=_('Enabled'))
 
-    #objects = InheritanceManager()
     objects = SourceManager()
 
     class Meta:
@@ -49,13 +49,14 @@ class Source(BackendModelMixin, models.Model):
     def __str__(self):
         return '%s' % self.label
 
-    #@classmethod
-    #def class_fullname(cls):
-    #    return force_text(s=dict(SOURCE_CHOICES).get(cls.source_type))
-
     def clean_up_upload_file(self, upload_file_object):
         pass
         # TODO: Should raise NotImplementedError?
+
+    def delete(self, *args, **kwargs):
+        with transaction.atomic():
+            #self.get_backend_instance().delete()
+            super().delete(*args, **kwargs)
 
     def fullname(self):
         #return ' '.join([self.class_fullname(), '"%s"' % self.label])
@@ -110,6 +111,11 @@ class Source(BackendModelMixin, models.Model):
         # Return a list of newly created documents. Used by the email source
         # to assign the from and subject metadata values.
         return documents
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            #self.get_backend_instance().save()
+            super().save(*args, **kwargs)
 
     def upload_document(
         self, file_object, document_type, description=None, label=None,
@@ -190,62 +196,3 @@ class IntervalBaseModel(OutOfProcessSource):
         verbose_name = _('Interval source')
         verbose_name_plural = _('Interval sources')
 
-    def _delete_periodic_task(self, pk=None):
-        try:
-            periodic_task = PeriodicTask.objects.get(
-                name=self._get_periodic_task_name(pk=pk)
-            )
-
-            interval_instance = periodic_task.interval
-
-            if tuple(interval_instance.periodictask_set.values_list('id', flat=True)) == (periodic_task.pk,):
-                # Only delete the interval if nobody else is using it
-                interval_instance.delete()
-            else:
-                periodic_task.delete()
-        except PeriodicTask.DoesNotExist:
-            logger.warning(
-                'Tried to delete non existant periodic task "%s"',
-                self._get_periodic_task_name(pk)
-            )
-
-    def _get_periodic_task_name(self, pk=None):
-        return 'check_interval_source-%i' % (pk or self.pk)
-
-    def check_source(self, test=False):
-        try:
-            self._check_source(test=test)
-        except Exception as exception:
-            self.error_log.create(
-                text='{}; {}'.format(
-                    exception.__class__.__name__, exception
-                )
-            )
-            raise
-        else:
-            self.error_log.all().delete()
-
-    def delete(self, *args, **kwargs):
-        pk = self.pk
-        with transaction.atomic():
-            super().delete(*args, **kwargs)
-            self._delete_periodic_task(pk=pk)
-
-    def save(self, *args, **kwargs):
-        new_source = not self.pk
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-
-            if not new_source:
-                self._delete_periodic_task()
-
-            interval_instance, created = IntervalSchedule.objects.get_or_create(
-                every=self.interval, period='seconds'
-            )
-            # Create a new interval or reuse someone else's
-            PeriodicTask.objects.create(
-                name=self._get_periodic_task_name(),
-                interval=interval_instance,
-                task='mayan.apps.sources.tasks.task_check_interval_source',
-                kwargs=json.dumps(obj={'source_id': self.pk})
-            )

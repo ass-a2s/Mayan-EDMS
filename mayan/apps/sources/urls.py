@@ -52,10 +52,6 @@ urlpatterns = [
         regex=r'^sources/$', name='source_list',
         view=SourceListView.as_view()
     ),
-    #url(
-    #    regex=r'^sources/create/(?P<source_type_name>\w+)/$',
-    #    name='setup_source_create', view=SourceCreateView.as_view()
-    #),
     url(
         regex=r'^sources/backend/selection/$',
         name='source_backend_selection',

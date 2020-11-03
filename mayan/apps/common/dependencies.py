@@ -59,6 +59,7 @@ PythonDependency(
         SOFTWARE.
     ''', module=__name__, name='PyYAML', version_string='==5.3.1'
 )
+#TODO: Remove after source refactor
 PythonDependency(
     copyright_text='''
         Copyright (c) 2009-2015, Carl Meyer and contributors

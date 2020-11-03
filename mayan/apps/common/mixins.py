@@ -50,12 +50,6 @@ class BackendModelMixin(models.Model):
     get_backend_label.short_description = _('Backend')
     get_backend_label.help_text = _('The backend class for this entry.')
 
-    def get_backend_label(self):
-        try:
-            return self.get_backend().label
-        except ImportError:
-            return _('Unknown action type')
-
     def get_backend_data(self):
         return json.loads(s=self.backend_data or '{}')
 

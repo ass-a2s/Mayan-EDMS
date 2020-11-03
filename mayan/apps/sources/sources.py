@@ -33,8 +33,6 @@ from .settings import setting_scanimage_path
 
 logger = logging.getLogger(name=__name__)
 
-#                POP3Email, IMAPEmail, StagingFolderSource, WatchFolderSource,
-#                WebFormSource,
 
 #interactive
 #label, enabled, uncompress
@@ -68,13 +66,6 @@ logger = logging.getLogger(name=__name__)
 # - Delete
 # - Move to folder
 
-#def get_upload_form_class(source_type_name):
-#    if source_type_name == SOURCE_CHOICE_WEB_FORM:
-#        return WebFormUploadForm
-#    elif source_type_name == SOURCE_CHOICE_STAGING:
-#        return StagingUploadForm
-#    elif source_type_name == SOURCE_CHOICE_SANE_SCANNER:
-#        return SaneScannerUploadForm
 
 class SourceBackendIMAPEmail(SourceBackend):
     can_uncompress = True
@@ -479,6 +470,33 @@ class SourceBackendStagingFolder(SourceBackend):
 
 
 class SourceBackendMixinPeriodic:
+    def _delete_periodic_task(self, pk=None):
+        PeriodicTask = apps.get_model(
+            app_label='django_celery_beat', model_name='PeriodicTask'
+        )
+
+        try:
+            periodic_task = PeriodicTask.objects.get(
+                name=self._get_periodic_task_name(pk=pk)
+            )
+
+            interval_instance = periodic_task.interval
+
+            #TODO:Update to use the a queryset
+            if tuple(interval_instance.periodictask_set.values_list('id', flat=True)) == (periodic_task.pk,):
+                # Only delete the interval if nobody else is using it
+                interval_instance.delete()
+            else:
+                periodic_task.delete()
+        except PeriodicTask.DoesNotExist:
+            logger.warning(
+                'Tried to delete non existent periodic task "%s"',
+                self._get_periodic_task_name(pk)
+            )
+
+    def _get_periodic_task_name(self, pk=None):
+        return 'check_interval_source-%i' % (pk or self.pk)
+
     def check_source(self, test=False):
         try:
             self._check_source(test=test)
@@ -492,6 +510,35 @@ class SourceBackendMixinPeriodic:
         else:
             self.get_model_instance().error_log.all().delete()
 
+    def delete(self, *args, **kwargs):
+        pk = self.pk
+        with transaction.atomic():
+            self._delete_periodic_task(pk=pk)
+
+    def save(self):
+        IntervalSchedule = apps.get_model(
+            app_label='django_celery_beat', model_name='PeriodicTask'
+        )
+        PeriodicTask = apps.get_model(
+            app_label='django_celery_beat', model_name='PeriodicTask'
+        )
+
+        new_source = not self.pk
+        with transaction.atomic():
+            if not new_source:
+                self._delete_periodic_task()
+
+            # Create a new interval or use an existing one
+            interval_instance, created = IntervalSchedule.objects.get_or_create(
+                every=self.interval, period='seconds'
+            )
+
+            PeriodicTask.objects.create(
+                name=self._get_periodic_task_name(),
+                interval=interval_instance,
+                task='mayan.apps.sources.tasks.task_check_interval_source',
+                kwargs=json.dumps(obj={'source_id': self.pk})
+            )
 
 
 class SourceBackendWatchFolder(SourceBackendMixinPeriodic, SourceBackend):
