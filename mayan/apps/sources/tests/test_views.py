@@ -11,7 +11,7 @@ from mayan.apps.documents.tests.literals import (
 )
 from mayan.apps.testing.tests.base import GenericViewTestCase
 
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
+from ..literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 from ..models import Source
 from ..permissions import (
     permission_sources_create, permission_sources_delete,
@@ -36,7 +36,7 @@ class DocumentUploadWizardViewTestCase(
     auto_upload_test_document = False
 
     def test_upload_compressed_file(self):
-        self.test_source.uncompress = SOURCE_UNCOMPRESS_CHOICE_Y
+        self.test_source.uncompress = SOURCE_UNCOMPRESS_CHOICE_ALWAYS
         self.test_source.save()
 
         self.grant_access(
@@ -246,7 +246,7 @@ class DocumentFileUploadViewTestCase(
         )
 '''
 
-class SourcesViewTestCase(
+class SourceViewTestCase(
     WebFormSourceTestMixin, SourceViewTestMixin, GenericViewTestCase
 ):
 
@@ -266,10 +266,12 @@ class SourcesViewTestCase(
         response = self._request_test_source_check_get_view()
         self.assertEqual(response.status_code, 404)
 
-    def test_source_check_get_view_with_permission(self):
+    def test_source_check_get_view_with_access(self):
         self._create_test_web_form_source()
 
-        self.grant_permission(permission=permission_sources_create)
+        self.grant_access(
+            obj=self.test_source, permission=permission_sources_edit
+        )
 
         response = self._request_test_source_check_get_view()
         self.assertEqual(response.status_code, 200)
@@ -308,10 +310,12 @@ class SourcesViewTestCase(
 
         self.assertEqual(Source.objects.count(), source_count)
 
-    def test_source_delete_view_with_permission(self):
+    def test_source_delete_view_with_access(self):
         self._create_test_web_form_source()
 
-        self.grant_permission(permission=permission_sources_delete)
+        self.grant_access(
+            obj=self.test_source, permission=permission_sources_delete
+        )
 
         source_count = Source.objects.count()
 
@@ -336,12 +340,14 @@ class SourcesViewTestCase(
             ), test_instance_values
         )
 
-    def test_source_edit_view_with_permission(self):
+    def test_source_edit_view_with_access(self):
         self._create_test_web_form_source()
         test_instance_values = self._model_instance_to_dictionary(
             instance=self.test_source
         )
-        self.grant_permission(permission=permission_sources_edit)
+        self.grant_access(
+            obj=self.test_source, permission=permission_sources_edit
+        )
 
         response = self._request_test_source_edit_view()
         self.assertEqual(response.status_code, 302)
@@ -359,10 +365,12 @@ class SourcesViewTestCase(
         response = self._request_test_source_list_view()
         self.assertEqual(response.status_code, 200)
 
-    def test_source_list_view_with_permission(self):
+    def test_source_list_view_with_access(self):
         self._create_test_web_form_source()
 
-        self.grant_permission(permission=permission_sources_view)
+        self.grant_access(
+            obj=self.test_source, permission=permission_sources_view
+        )
 
         response = self._request_test_source_list_view()
         self.assertContains(

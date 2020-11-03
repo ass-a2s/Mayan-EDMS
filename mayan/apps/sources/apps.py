@@ -2,6 +2,11 @@ from django.apps import apps
 from django.db.models.signals import pre_delete
 from django.utils.translation import ugettext_lazy as _
 
+from mayan.apps.acls.classes import ModelPermission
+from mayan.apps.acls.links import link_acl_list
+from mayan.apps.acls.permissions import (
+    permission_acl_edit, permission_acl_view
+)
 from mayan.apps.common.apps import MayanAppConfig
 from mayan.apps.common.classes import MissingItem
 from mayan.apps.common.signals import (
@@ -29,8 +34,6 @@ from .links import (
     link_source_backend_selection, link_source_delete, link_source_edit,
     link_source_list, link_staging_file_delete, link_document_file_upload
 )
-##TODO: register permission, use in views and add tests
-#ZTODO: add ACL, event and notification links
 from .permissions import (
     permission_sources_delete, permission_sources_edit,
     permission_sources_view
@@ -75,6 +78,13 @@ class SourcesApp(MayanAppConfig):
             view='sources:source_list'
         )
 
+        ModelPermission.register(
+            model=Source, permissions=(
+                permission_sources_delete, permission_sources_edit,
+                permission_sources_view,
+            )
+        )
+
         SourceColumn(
             attribute='label', is_identifier=True, is_sortable=True,
             source=Source
@@ -107,7 +117,7 @@ class SourcesApp(MayanAppConfig):
 
         menu_list_facet.bind_links(
             links=(
-                link_transformation_list,
+                link_acl_list, link_transformation_list,
             ), sources=(
                 Source,
             )

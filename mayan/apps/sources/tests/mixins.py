@@ -9,18 +9,20 @@ from mayan.apps.documents.tests.literals import (
 )
 from mayan.apps.storage.utils import fs_cleanup, mkdtemp
 
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
+from ..literals import (
+    SOURCE_UNCOMPRESS_CHOICE_NEVER, SOURCE_UNCOMPRESS_CHOICE_ALWAYS
+)
 from ..models import Source
 #from ..models.staging_folder_sources import StagingFolderSource
 #from ..models.watch_folder_sources import WatchFolderSource
 #from ..models.webform_sources import WebFormSource
 
 from .literals import (
-    TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_SOURCE_UNCOMPRESS_N,
-    TEST_STAGING_PREVIEW_WIDTH
+    TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_STAGING_PREVIEW_WIDTH
 )
 
-TEST_SOURCE_BACKEND_PATH = 'mayan.apps.sources.sources.SourceBackendWebForm'
+SOURCE_BACKEND_WEB_FORM_PATH = 'mayan.apps.sources.sources.SourceBackendWebForm'
+SOURCE_BACKEND_WATCHFOLDER_PATH = 'mayan.apps.sources.sources.SourceBackendWatchFolder'
 
 
 class DocumentUploadIssueTestMixin:
@@ -109,7 +111,7 @@ class StagingFolderAPIViewTestMixin:
                 'label': TEST_SOURCE_LABEL,
                 'folder_path': mkdtemp(),
                 'preview_width': TEST_STAGING_PREVIEW_WIDTH,
-                'uncompress': TEST_SOURCE_UNCOMPRESS_N,
+                'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER,
             }
         )
 
@@ -184,7 +186,7 @@ class StagingFolderTestMixin:
             label=TEST_SOURCE_LABEL,
             folder_path=mkdtemp(),
             preview_width=TEST_STAGING_PREVIEW_WIDTH,
-            uncompress=TEST_SOURCE_UNCOMPRESS_N,
+            uncompress=SOURCE_UNCOMPRESS_CHOICE_NEVER,
         )
         self.test_staging_folders.append(self.test_staging_folder)
 
@@ -236,7 +238,7 @@ class SourceViewTestMixin:
                 'backend_path': TEST_SOURCE_BACKEND_PATH
             }, viewname='sources:source_create', data={
                 'enabled': True, 'label': TEST_SOURCE_LABEL,
-                'uncompress': TEST_SOURCE_UNCOMPRESS_N
+                'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER
             }
         )
 
@@ -270,30 +272,49 @@ class SourceViewTestMixin:
         return self.get(viewname='sources:source_list')
 
 
-class WatchFolderTestMixin:
+class SourceTestMixin:
+    def _create_test_source(self, backend_path, backend_data=None):
+        self.test_source = Source.objects.create(
+            backend_path=backend_path,
+            backend_data=json.dumps(obj=backend_data),
+            label=TEST_SOURCE_LABEL
+        )
+
+
+class WatchFolderTestMixin(SourceTestMixin):
     def setUp(self):
         super().setUp()
         self.temporary_directory = mkdtemp()
 
     def tearDown(self):
-        shutil.rmtree(self.temporary_directory)
+        shutil.rmtree(path=self.temporary_directory)
         super().tearDown()
 
-    def _create_test_watchfolder(self):
-        self.test_watch_folder = WatchFolderSource.objects.create(
-            document_type=self.test_document_type,
-            folder_path=self.temporary_directory,
-            include_subdirectories=False,
-            uncompress=SOURCE_UNCOMPRESS_CHOICE_Y
+    def _create_test_watchfolder(self, extra_data=None):
+        backend_data = {
+            'document_type_id': self.test_document_type.pk,
+            'folder_path': self.temporary_directory,
+            'include_subdirectories': False,
+            'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER
+        }
+
+        if extra_data:
+            backend_data.update(extra_data)
+
+        self._create_test_source(
+            backend_path=SOURCE_BACKEND_WATCHFOLDER_PATH,
+            backend_data=backend_data
         )
 
 
-class WebFormSourceTestMixin:
-    def _create_test_web_form_source(self):
-        self.test_source = Source.objects.create(
-            enabled=True, label=TEST_SOURCE_LABEL,
-            backend_path=TEST_SOURCE_BACKEND_PATH,
-            backend_data=json.dumps(
-                obj={'uncompress': TEST_SOURCE_UNCOMPRESS_N}
-            )
+class WebFormSourceTestMixin(SourceTestMixin):
+    def _create_test_web_form_source(self, extra_data=None):
+        backend_data = {'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER}
+
+        if extra_data:
+            backend_data.update(extra_data)
+
+        self._create_test_source(
+            backend_path=SOURCE_BACKEND_WEB_FORM_PATH,
+            backend_data=backend_data
         )

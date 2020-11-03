@@ -101,6 +101,17 @@ class UploadBaseView(MultiFormView):
 
         return context
 
+    def get_form_classes(self):
+        result = {
+            'document_form': self.document_form,
+        }
+
+        source_form = self.source.get_backend().get_upload_form_class()
+        if source_form:
+            result['source_form'] = source_form
+
+        return result
+
     def get_source(self):
         if 'source_id' in self.kwargs:
             return get_object_or_404(

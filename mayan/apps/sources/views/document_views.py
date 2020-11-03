@@ -16,7 +16,7 @@ from mayan.apps.storage.models import SharedUploadedFile
 
 from ..exceptions import SourceException
 from ..forms import NewDocumentForm
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_ASK, SOURCE_UNCOMPRESS_CHOICE_Y
+from ..literals import SOURCE_UNCOMPRESS_CHOICE_ASK, SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 from ..tasks import task_source_handle_upload
 
 from .base import UploadBaseView
@@ -26,6 +26,8 @@ logger = logging.getLogger(name=__name__)
 
 
 class DocumentUploadInteractiveView(UploadBaseView):
+    document_form = NewDocumentForm
+
     def dispatch(self, request, *args, **kwargs):
         self.subtemplates_list = []
 
@@ -49,7 +51,7 @@ class DocumentUploadInteractiveView(UploadBaseView):
             if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
                 expand = forms['source_form'].cleaned_data.get('expand')
             else:
-                if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_Y:
+                if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ALWAYS:
                     expand = True
                 else:
                     expand = False
@@ -155,12 +157,14 @@ class DocumentUploadInteractiveView(UploadBaseView):
 
         return context
 
-    def get_form_classes(self):
-        return {
-            'document_form': NewDocumentForm,
-            'source_form': self.source.get_backend().upload_form_class
+    #def get_form_classes(self):
+    #    result = {
+    #        'document_form': NewDocumentForm,
+    #    }
+    #    'source_form': self.source.get_backend().upload_form_class
+    #
+    #    return
 
-        }
 
     def get_form_extra_kwargs__document_form(self):
         return {

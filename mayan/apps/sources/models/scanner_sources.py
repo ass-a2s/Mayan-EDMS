@@ -9,10 +9,10 @@ from mayan.apps.storage.utils import TemporaryFile
 
 from ..classes import PseudoFile, SourceUploadedFile
 from ..exceptions import SourceException
-from ..literals import (
-    SCANNER_ADF_MODE_CHOICES, SCANNER_MODE_CHOICES, SCANNER_MODE_COLOR,
-    SCANNER_SOURCE_CHOICES
-)
+#from ..literals import (
+#    SCANNER_ADF_MODE_CHOICES, SCANNER_MODE_CHOICES, SCANNER_MODE_COLOR,
+#    SCANNER_SOURCE_CHOICES
+#)
 from ..settings import setting_scanimage_path
 
 from .base import InteractiveSource
@@ -20,7 +20,7 @@ from .base import InteractiveSource
 __all__ = ('SaneScanner',)
 logger = logging.getLogger(name=__name__)
 
-
+"""
 class SaneScanner(InteractiveSource):
     can_uncompress = False
     is_interactive = True
@@ -64,3 +64,4 @@ class SaneScanner(InteractiveSource):
     class Meta:
         verbose_name = _('SANE Scanner')
         verbose_name_plural = _('SANE Scanners')
+"""

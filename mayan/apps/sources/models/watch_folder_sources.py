@@ -7,7 +7,7 @@ from django.db import models
 from django.utils.translation import ugettext_lazy as _
 
 from ..exceptions import SourceException
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
+from ..literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 
 from .base import IntervalBaseModel
 

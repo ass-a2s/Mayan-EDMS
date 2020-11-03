@@ -75,6 +75,7 @@ class SourceBackend(
     six.with_metaclass(SourceBackendMetaclass, SourceBackendBase)
 ):
     _loader_module_name = 'sources'
+    upload_form_class = None
 
     @classmethod
     def get(cls, name):
@@ -93,6 +94,10 @@ class SourceBackend(
                 ) for key, backend in cls.get_all().items()
             ], key=lambda x: x[1]
         )
+
+    @classmethod
+    def get_upload_form_class(cls):
+        return cls.upload_form_class
 
     def __init__(self, model_instance_id, **kwargs):
         self.model_instance_id = model_instance_id

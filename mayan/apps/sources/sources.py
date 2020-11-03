@@ -22,12 +22,12 @@ from .classes import (
 )
 from .exceptions import SourceException
 from .forms import (
-    SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5
+    #SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5
+    StagingUploadForm, WebFormUploadFormHTML5
 )
 from .literals import (
-    DEFAULT_INTERVAL, SCANNER_ADF_MODE_CHOICES, SCANNER_MODE_CHOICES,
-    SCANNER_MODE_COLOR, SCANNER_SOURCE_CHOICES,
-    SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES, SOURCE_UNCOMPRESS_CHOICE_Y
+    DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
+    SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 )
 from .settings import setting_scanimage_path
 
@@ -237,7 +237,7 @@ class SourceBackendSANEScanner(SourceBackend):
     }
     is_interactive = True
     label = _('SANE Scanner')
-    upload_form_class = SaneScannerUploadForm
+    #upload_form_class = SaneScannerUploadForm
     widgets = {
         'arguments': {
             'class': 'django.forms.widgets.Textarea', 'kwargs': {
@@ -497,7 +497,7 @@ class SourceBackendMixinPeriodic:
     def _get_periodic_task_name(self, pk=None):
         return 'check_interval_source-%i' % (pk or self.pk)
 
-    def check_source(self, test=False):
+    def check(self, test=False):
         try:
             self._check_source(test=test)
         except Exception as exception:
@@ -643,7 +643,7 @@ class SourceBackendWatchFolder(SourceBackendMixinPeriodic, SourceBackend):
                     else:
                         self.get_model_instance().handle_upload(
                             file_object=file_object,
-                            expand=(self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_Y),
+                            expand=(self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ALWAYS),
                             label=entry.name
                         )
                         if not test:

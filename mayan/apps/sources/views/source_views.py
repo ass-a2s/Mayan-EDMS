@@ -56,7 +56,7 @@ class SourceCheckView(ExternalObjectMixin, ConfirmView):
     Trigger the task_check_interval_source task for a given source to
     test/debug their configuration irrespective of the schedule task setup.
     """
-    external_object_permission = permission_sources_create
+    external_object_permission = permission_sources_edit
     external_object_pk_url_kwarg = 'source_id'
     external_object_class = Source
 

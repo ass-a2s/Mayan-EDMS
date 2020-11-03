@@ -16,13 +16,13 @@ from mayan.apps.documents.tests.base import GenericDocumentTestCase
 from mayan.apps.documents.tests.literals import (
     TEST_COMPRESSED_DOCUMENT_PATH, TEST_NON_ASCII_DOCUMENT_FILENAME,
     TEST_NON_ASCII_DOCUMENT_PATH, TEST_NON_ASCII_COMPRESSED_DOCUMENT_PATH,
-    TEST_SMALL_DOCUMENT_FILENAME, TEST_SMALL_DOCUMENT_PATH
+    TEST_SMALL_DOCUMENT_CHECKSUM, TEST_SMALL_DOCUMENT_FILENAME,
+    TEST_SMALL_DOCUMENT_PATH
 )
 from mayan.apps.metadata.models import MetadataType
 
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
-from ..models.email_sources import EmailBaseModel, IMAPEmail, POP3Email
-from ..models.scanner_sources import SaneScanner
+from ..literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
+from ..models import Source
 
 from .literals import (
     TEST_EMAIL_ATTACHMENT_AND_INLINE, TEST_EMAIL_BASE64_FILENAME,
@@ -35,23 +35,152 @@ from .mixins import WebFormSourceTestMixin, WatchFolderTestMixin
 from .mocks import MockIMAPServer, MockPOP3Mailbox
 
 
-class WebFormSourceTestCase(WebFormSourceTestMixin, GenericDocumentTestCase):
+
+class SourceWatchFolderTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
     auto_upload_test_document = False
 
+    def test_upload_simple_file(self):
+        self._create_test_watchfolder()
+
+        document_count = Document.objects.count()
+
+        shutil.copy(src=TEST_SMALL_DOCUMENT_PATH, dst=self.temporary_directory)
+
+        self.test_source.get_backend_instance().check()
+
+        self.assertEqual(Document.objects.count(), document_count + 1)
+        self.assertEqual(
+            Document.objects.first().file_latest.checksum,
+            TEST_SMALL_DOCUMENT_CHECKSUM
+        )
+
+    def test_subfolder_disabled(self):
+        self._create_test_watchfolder()
+
+        test_path = Path(self.temporary_directory)
+        test_subfolder = test_path.joinpath(TEST_WATCHFOLDER_SUBFOLDER)
+        test_subfolder.mkdir()
+
+        shutil.copy(
+            src=TEST_SMALL_DOCUMENT_PATH, dst=test_subfolder
+        )
+
+        document_count = Document.objects.count()
+
+        self.test_source.get_backend_instance().check()
+
+        self.assertEqual(Document.objects.count(), document_count)
+
+    def test_subfolder_enabled(self):
+        self._create_test_watchfolder(
+            extra_data={'include_subdirectories': True}
+        )
+
+        test_path = Path(self.temporary_directory)
+        test_subfolder = test_path.joinpath(TEST_WATCHFOLDER_SUBFOLDER)
+        test_subfolder.mkdir()
+
+        shutil.copy(src=TEST_SMALL_DOCUMENT_PATH, dst=test_subfolder)
+
+        document_count = Document.objects.count()
+
+        self.test_source.get_backend_instance().check()
+
+        self.assertEqual(Document.objects.count(), document_count + 1)
+
+        document = Document.objects.first()
+
+        self.assertEqual(
+            document.file_latest.checksum, TEST_SMALL_DOCUMENT_CHECKSUM
+        )
+
+    def test_non_ascii_file_in_non_ascii_compressed_file(self):
+        """
+        Test Non-ASCII named documents inside Non-ASCII named compressed
+        file. GitHub issue #163.
+        """
+        self._create_test_watchfolder(
+            extra_data={'uncompress': SOURCE_UNCOMPRESS_CHOICE_ALWAYS}
+        )
+
+        shutil.copy(
+            src=TEST_NON_ASCII_COMPRESSED_DOCUMENT_PATH,
+            dst=self.temporary_directory
+        )
+
+        document_count = Document.objects.count()
+
+        self.test_source.get_backend_instance().check()
+
+        self.assertEqual(Document.objects.count(), document_count + 1)
+
+        document = Document.objects.first()
+
+        self.assertEqual(document.label, TEST_NON_ASCII_DOCUMENT_FILENAME)
+        self.assertEqual(document.file_latest.exists(), True)
+        self.assertEqual(document.file_latest.size, 17436)
+        self.assertEqual(document.file_latest.mimetype, 'image/png')
+        self.assertEqual(document.file_latest.encoding, 'binary')
+        self.assertEqual(document.file_latest.page_count, 1)
+
+    def test_locking_support(self):
+        self._create_test_watchfolder()
+
+        shutil.copy(
+            src=TEST_SMALL_DOCUMENT_PATH, dst=self.temporary_directory
+        )
+
+        path_test_file = Path(
+            self.temporary_directory, TEST_SMALL_DOCUMENT_FILENAME
+        )
+
+        document_count = Document.objects.count()
+
+        with path_test_file.open(mode='rb+') as file_object:
+            fcntl.lockf(file_object, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            process = Process(target=self.test_source.check)
+            process.start()
+            process.join()
+
+        self.assertEqual(Document.objects.count(), document_count)
+
+
+class SourceWebFormTestCase(WebFormSourceTestMixin, GenericDocumentTestCase):
+    auto_upload_test_document = False
+
+    def test_upload_simple_file(self):
+        self._create_test_web_form_source()
+
+        document_count = Document.objects.count()
+
+        with open(file=TEST_SMALL_DOCUMENT_PATH, mode='rb') as file_object:
+            self.test_source.handle_upload(
+                document_type=self.test_document_type,
+                file_object=file_object,
+            )
+
+        self.assertEqual(Document.objects.count(), document_count + 1)
+        self.assertEqual(
+            Document.objects.first().file_latest.checksum,
+            TEST_SMALL_DOCUMENT_CHECKSUM
+        )
+
     def test_upload_compressed_file(self):
-        self.test_source.uncompress = SOURCE_UNCOMPRESS_CHOICE_Y
-        self.test_source.save()
+        self._create_test_web_form_source(
+            extra_data={'uncompress': SOURCE_UNCOMPRESS_CHOICE_ALWAYS}
+        )
+
+        document_count = Document.objects.count()
 
         with open(file=TEST_COMPRESSED_DOCUMENT_PATH, mode='rb') as file_object:
             self.test_source.handle_upload(
                 document_type=self.test_document_type,
                 file_object=file_object,
-                expand=(
-                    self.test_source.uncompress == SOURCE_UNCOMPRESS_CHOICE_Y
-                )
+                expand=True
             )
 
-        self.assertEqual(Document.objects.count(), 2)
+        self.assertEqual(Document.objects.count(), document_count + 2)
+
         self.assertTrue(
             'first document.pdf' in Document.objects.values_list(
                 'label', flat=True

@@ -13,7 +13,7 @@ from mayan.apps.views.forms import DynamicModelForm
 
 from .classes import SourceBackend
 from .models import (
-    IMAPEmail, POP3Email, SaneScanner, Source, StagingFolderSource,
+    IMAPEmail, POP3Email, Source, StagingFolderSource,
     WebFormSource, WatchFolderSource
 )
 
@@ -148,66 +148,5 @@ class WebFormUploadFormHTML5(UploadBaseForm):
     )
 
 
-class SaneScannerUploadForm(UploadBaseForm):
-    pass
-
-
-#class SaneScannerSetupForm(forms.ModelForm):
-#    class Meta:
-#        fields = (
-#            'label', 'device_name', 'mode', 'resolution', 'source',
-#            'adf_mode', 'enabled'
-#        )
-#        model = SaneScanner
-
-
-#class WebFormSetupForm(forms.ModelForm):
-#    class Meta:
-#        fields = ('label', 'enabled', 'uncompress')
-#        model = WebFormSource
-
-
-#class StagingFolderSetupForm(forms.ModelForm):
-#    class Meta:
-#        fields = (
-#            'label', 'enabled', 'folder_path', 'preview_width',
-#            'preview_height', 'uncompress', 'delete_after_upload'
-#        )
-#        model = StagingFolderSource
-
-
-#class EmailSetupBaseForm(forms.ModelForm):
-#    class Meta:
-#        fields = (
-#            'label', 'enabled', 'interval', 'document_type', 'uncompress',
-#            'host', 'ssl', 'port', 'username', 'password',
-#            'metadata_attachment_name', 'subject_metadata_type',
-#            'from_metadata_type', 'store_body'
-#        )
-#        widgets = {
-#            'password': forms.widgets.PasswordInput(render_value=True)
-#        }#
-
-
-#class IMAPEmailSetupForm(EmailSetupBaseForm):
-#    class Meta(EmailSetupBaseForm.Meta):
-#        fields = EmailSetupBaseForm.Meta.fields + (
-#            'mailbox', 'search_criteria', 'store_commands',
-#            'mailbox_destination', 'execute_expunge'
-#        )
-#        model = IMAPEmail#
-
-
-#class POP3EmailSetupForm(EmailSetupBaseForm):
-#    class Meta(EmailSetupBaseForm.Meta):
-#        fields = EmailSetupBaseForm.Meta.fields + ('timeout',)
-#        model = POP3Email
-
-
-#class WatchFolderSetupForm(forms.ModelForm):
-#    class Meta:
-#        fields = (
-#            'label', 'enabled', 'interval', 'document_type', 'uncompress',
-#            'folder_path', 'include_subdirectories'
-#        )
-#        model = WatchFolderSource
+#class SaneScannerUploadForm(UploadBaseForm):
+#    pass

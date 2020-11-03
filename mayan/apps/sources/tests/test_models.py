@@ -20,7 +20,7 @@ from mayan.apps.documents.tests.literals import (
 )
 from mayan.apps.metadata.models import MetadataType
 
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_Y
+from ..literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 from ..models.email_sources import EmailBaseModel, IMAPEmail, POP3Email
 from ..models.scanner_sources import SaneScanner
 
@@ -35,35 +35,6 @@ from .mixins import WebFormSourceTestMixin, WatchFolderTestMixin
 from .mocks import MockIMAPServer, MockPOP3Mailbox
 
 '''
-class CompressedUploadsTestCase(WebFormSourceTestMixin, GenericDocumentTestCase):
-    auto_upload_test_document = False
-
-    def test_upload_compressed_file(self):
-        self.test_source.uncompress = SOURCE_UNCOMPRESS_CHOICE_Y
-        self.test_source.save()
-
-        with open(file=TEST_COMPRESSED_DOCUMENT_PATH, mode='rb') as file_object:
-            self.test_source.handle_upload(
-                document_type=self.test_document_type,
-                file_object=file_object,
-                expand=(
-                    self.test_source.uncompress == SOURCE_UNCOMPRESS_CHOICE_Y
-                )
-            )
-
-        self.assertEqual(Document.objects.count(), 2)
-        self.assertTrue(
-            'first document.pdf' in Document.objects.values_list(
-                'label', flat=True
-            )
-        )
-        self.assertTrue(
-            'second document.pdf' in Document.objects.values_list(
-                'label', flat=True
-            )
-        )
-
-
 class EmailBaseTestCase(GenericDocumentTestCase):
     auto_upload_test_document = False
 
@@ -333,101 +304,5 @@ class SANESourceTestCase(GenericDocumentTestCase):
         self.assertTrue(file_object.size > 0)
 
 
-class WatchFolderTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
-    auto_upload_test_document = False
 
-    def test_subfolder_support_disabled(self):
-        self._create_test_watchfolder()
-
-        test_path = Path(self.temporary_directory)
-        test_subfolder = test_path.joinpath(TEST_WATCHFOLDER_SUBFOLDER)
-        test_subfolder.mkdir()
-
-        shutil.copy(TEST_SMALL_DOCUMENT_PATH, force_text(s=test_subfolder))
-        self.test_watch_folder.check_source()
-        self.assertEqual(Document.objects.count(), 0)
-
-    def test_subfolder_support_enabled(self):
-        self._create_test_watchfolder()
-        self.test_watch_folder.include_subdirectories = True
-        self.test_watch_folder.save()
-
-        test_path = Path(self.temporary_directory)
-        test_subfolder = test_path.joinpath(TEST_WATCHFOLDER_SUBFOLDER)
-        test_subfolder.mkdir()
-
-        shutil.copy(TEST_SMALL_DOCUMENT_PATH, force_text(s=test_subfolder))
-        self.test_watch_folder.check_source()
-        self.assertEqual(Document.objects.count(), 1)
-
-        document = Document.objects.first()
-
-        self.assertEqual(document.file_latest.exists(), True)
-        self.assertEqual(document.file_latest.size, 17436)
-
-        self.assertEqual(document.file_latest.mimetype, 'image/png')
-        self.assertEqual(document.file_latest.encoding, 'binary')
-        self.assertEqual(document.label, TEST_SMALL_DOCUMENT_FILENAME)
-        self.assertEqual(document.file_latest.page_count, 1)
-
-    def test_issue_gh_163(self):
-        """
-        Non-ASCII chars in document name failing in upload via watch folder
-        gh-issue #163 https://github.com/mayan-edms/mayan-edms/issues/163
-        """
-        self._create_test_watchfolder()
-
-        shutil.copy(TEST_NON_ASCII_DOCUMENT_PATH, self.temporary_directory)
-        self.test_watch_folder.check_source()
-        self.assertEqual(Document.objects.count(), 1)
-
-        document = Document.objects.first()
-
-        self.assertEqual(document.file_latest.exists(), True)
-        self.assertEqual(document.file_latest.size, 17436)
-
-        self.assertEqual(document.file_latest.mimetype, 'image/png')
-        self.assertEqual(document.file_latest.encoding, 'binary')
-        self.assertEqual(document.label, TEST_NON_ASCII_DOCUMENT_FILENAME)
-        self.assertEqual(document.file_latest.page_count, 1)
-
-    def test_issue_gh_163_expanded(self):
-        """
-        Test Non-ASCII named documents inside Non-ASCII named compressed file
-        """
-        self._create_test_watchfolder()
-
-        shutil.copy(
-            TEST_NON_ASCII_COMPRESSED_DOCUMENT_PATH, self.temporary_directory
-        )
-        self.test_watch_folder.check_source()
-        self.assertEqual(Document.objects.count(), 1)
-
-        document = Document.objects.first()
-
-        self.assertEqual(document.file_latest.exists(), True)
-        self.assertEqual(document.file_latest.size, 17436)
-        self.assertEqual(document.file_latest.mimetype, 'image/png')
-        self.assertEqual(document.file_latest.encoding, 'binary')
-        self.assertEqual(document.label, TEST_NON_ASCII_DOCUMENT_FILENAME)
-        self.assertEqual(document.file_latest.page_count, 1)
-
-    def test_locking_support(self):
-        self._create_test_watchfolder()
-
-        shutil.copy(
-            TEST_SMALL_DOCUMENT_PATH, self.temporary_directory
-        )
-
-        path_test_file = Path(
-            self.temporary_directory, TEST_SMALL_DOCUMENT_FILENAME
-        )
-
-        with path_test_file.open(mode='rb+') as file_object:
-            fcntl.lockf(file_object, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            process = Process(target=self.test_watch_folder.check_source)
-            process.start()
-            process.join()
-
-            self.assertEqual(Document.objects.count(), 0)
 '''

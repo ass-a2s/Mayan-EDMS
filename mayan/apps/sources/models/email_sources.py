@@ -19,7 +19,7 @@ from ..literals import (
     DEFAULT_IMAP_STORE_COMMANDS, DEFAULT_METADATA_ATTACHMENT_NAME,
     DEFAULT_POP3_TIMEOUT,
     #SOURCE_CHOICE_EMAIL_IMAP, SOURCE_CHOICE_EMAIL_POP3,
-    SOURCE_UNCOMPRESS_CHOICE_N, SOURCE_UNCOMPRESS_CHOICE_Y,
+    SOURCE_UNCOMPRESS_CHOICE_NEVER, SOURCE_UNCOMPRESS_CHOICE_ALWAYS,
 )
 
 from .base import IntervalBaseModel
@@ -151,7 +151,7 @@ class EmailBaseModel(IntervalBaseModel):
                         documents = source.handle_upload(
                             document_type=source.document_type,
                             file_object=file_object, expand=(
-                                source.uncompress == SOURCE_UNCOMPRESS_CHOICE_Y
+                                source.uncompress == SOURCE_UNCOMPRESS_CHOICE_ALWAYS
                             )
                         )
 
@@ -170,7 +170,7 @@ class EmailBaseModel(IntervalBaseModel):
                     with ContentFile(content=force_bytes(message.body), name=label) as file_object:
                         documents = source.handle_upload(
                             document_type=source.document_type,
-                            expand=SOURCE_UNCOMPRESS_CHOICE_N,
+                            expand=SOURCE_UNCOMPRESS_CHOICE_NEVER,
                             file_object=file_object
                         )
 
