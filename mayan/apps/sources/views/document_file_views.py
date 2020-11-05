@@ -29,9 +29,7 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
     def dispatch(self, request, *args, **kwargs):
         self.subtemplates_list = []
 
-        self.document = get_object_or_404(
-            klass=Document, pk=kwargs['document_id']
-        )
+        self.document = self.get_document()
 
         AccessControlList.objects.check_access(
             obj=self.document, permissions=(permission_document_file_new,),
@@ -168,11 +166,10 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
 
         return context
 
-    #def get_form_classes(self):
-    #    return {
-    #        'document_form': NewFileForm,
-    #        'source_form': self.source.get_backend().upload_form_class
-    #    }
+    def get_document(self):
+        return get_object_or_404(
+            klass=Document, pk=kwargs['document_id']
+        )
 
     def get_form_extra_kwargs__source_form(self, **kwargs):
         return {

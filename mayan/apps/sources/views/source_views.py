@@ -107,15 +107,7 @@ class SourceCreateView(SingleObjectDynamicFormCreateView):
         }
 
     def get_form_schema(self):
-        backend = self.get_backend()
-        result = {
-            'fields': backend.fields,
-            'widgets': getattr(backend, 'widgets', {})
-        }
-        if hasattr(backend, 'field_order'):
-            result['field_order'] = backend.field_order
-
-        return result
+        return self.get_backend().get_setup_form_schema()
 
     def get_instance_extra_data(self):
         return {'backend_path': self.kwargs['backend_path']}
@@ -148,15 +140,7 @@ class SourceEditView(SingleObjectDynamicFormEditView):
         }
 
     def get_form_schema(self):
-        backend = self.object.get_backend()
-        result = {
-            'fields': backend.fields,
-            'widgets': getattr(backend, 'widgets', {})
-        }
-        if hasattr(backend, 'field_order'):
-            result['field_order'] = backend.field_order
-
-        return result
+        return self.object.get_backend().get_setup_form_schema()
 
 
 class SourceListView(SingleObjectListView):

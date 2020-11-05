@@ -249,7 +249,6 @@ class DocumentFileUploadViewTestCase(
 class SourceViewTestCase(
     WebFormSourceTestMixin, SourceViewTestMixin, GenericViewTestCase
 ):
-
     def test_source_check_get_view_no_permission(self):
         response = self._request_test_source_backend_selection_view()
         self.assertEqual(response.status_code, 404)

@@ -14,6 +14,8 @@ from .views.source_views import (
 from .wizards import DocumentCreateWizard
 
 urlpatterns = [
+    # Staging folder files
+
     url(
         regex=r'^staging_folders/(?P<staging_folder_id>\d+)/files/(?P<encoded_filename>.+)/delete/$',
         name='staging_file_delete', view=StagingFileDeleteView.as_view()

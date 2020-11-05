@@ -71,45 +71,64 @@ def task_generate_staging_file_image(
     bind=True, default_retry_delay=DEFAULT_SOURCE_TASK_RETRY_DELAY,
     ignore_result=True
 )
-def task_source_handle_upload(
+def task_process_document_upload(
     self, document_type_id, shared_uploaded_file_id, source_id,
     description=None, expand=False, label=None, language=None,
-    querystring=None, skip_list=None, user_id=None
+    query_string=None, user_id=None
 ):
-    DocumentType = apps.get_model(
-        app_label='documents', model_name='DocumentType'
-    )
-
-    SharedUploadedFile = apps.get_model(
-        app_label='storage', model_name='SharedUploadedFile'
-    )
-
     try:
-        document_type = DocumentType.objects.get(pk=document_type_id)
-        shared_upload = SharedUploadedFile.objects.get(
-            pk=shared_uploaded_file_id
+        DocumentType = apps.get_model(
+            app_label='documents', model_name='DocumentType'
+        )
+        SharedUploadedFile = apps.get_model(
+            app_label='storage', model_name='SharedUploadedFile'
+        )
+        Source = apps.get_model(
+            app_label='sources', model_name='Source'
         )
 
-        if not label:
-            label = shared_upload.filename
 
+        document_type = DocumentType.objects.get(pk=document_type_id)
+        shared_uploaded_file = SharedUploadedFile.objects.get(
+            pk=shared_uploaded_file_id
+        )
+        source = Source.objects.get(pk=source_id)
+
+        if not label:
+            label = shared_uploaded_file.filename
+
+        query_string = query_string or {}
+
+        if user_id:
+            user = get_user_model().objects.get(pk=user_id)
+        else:
+            user = None
     except OperationalError as exception:
         logger.warning(
             'Operational error during attempt to load data to handle source '
             'upload: %s. Retrying.', exception
         )
         raise self.retry(exc=exception)
+    else:
+        with shared_uploaded_file.open() as file_object:
+            source.handle_file_object_upload(
+                document_type=document_type, description=description,
+                expand=expand, file_object=file_object, label=label,
+                language=language, query_string=query_string, user=user
+            )
 
-    kwargs = {
-        'description': description, 'document_type_id': document_type.pk,
-        'label': label, 'language': language, 'querystring': querystring,
-        'source_id': source_id, 'user_id': user_id
-    }
+        shared_uploaded_file.delete()
+    #kwargs = {
+    #    'description': description, 'document_type_id': document_type.pk,
+    #    'label': label, 'language': language, 'query_string': query_string,
+    #    'source_id': source_id, 'user_id': user_id
+    #}
 
-    if not skip_list:
-        skip_list = []
+    #if not skip_list:
+    #    skip_list = []
 
-    with shared_upload.open() as file_object:
+    #with shared_upload.open() as file_object:
+        """
         if expand:
             try:
                 compressed_file = Archive.open(file_object=file_object)
@@ -130,10 +149,10 @@ def task_source_handle_upload(
                                 'Operational error while preparing to upload '
                                 'child document: %s. Rescheduling.', exception
                             )
-
                             # TODO: Don't call the task itself again
                             # Update to use celery's retry feature
-                            task_source_handle_upload.delay(
+                            #raise self.retry(exc=exception)
+                            task_source_handle_file_object_upload.delay(
                                 document_type_id=document_type_id,
                                 shared_uploaded_file_id=shared_uploaded_file_id,
                                 source_id=source_id, description=description,
@@ -167,11 +186,14 @@ def task_source_handle_upload(
                     shared_uploaded_file_id=shared_upload.pk, **kwargs
                 )
         else:
-            task_upload_document.delay(
-                shared_uploaded_file_id=shared_upload.pk, **kwargs
-            )
+        """
+    #    task_document_upload.apply_async(
+    #        kwargs={
+    #            '
+    #        shared_uploaded_file_id=shared_upload.pk, **kwargs
+    #    )
 
-
+"""
 @app.task(
     bind=True, default_retry_delay=DEFAULT_SOURCE_TASK_RETRY_DELAY,
     ignore_result=True
@@ -227,3 +249,4 @@ def task_upload_document(
                 'Operational error during attempt to delete shared upload '
                 'file: %s; %s. Retrying.', shared_upload, exception
             )
+"""

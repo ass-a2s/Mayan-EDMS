@@ -1,7 +1,7 @@
 import logging
 
 from django.contrib import messages
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.encoding import force_text
@@ -17,7 +17,7 @@ from mayan.apps.storage.models import SharedUploadedFile
 from ..exceptions import SourceException
 from ..forms import NewDocumentForm
 from ..literals import SOURCE_UNCOMPRESS_CHOICE_ASK, SOURCE_UNCOMPRESS_CHOICE_ALWAYS
-from ..tasks import task_source_handle_upload
+#from ..tasks import task_source_handle_upload
 
 from .base import UploadBaseView
 
@@ -31,11 +31,7 @@ class DocumentUploadInteractiveView(UploadBaseView):
     def dispatch(self, request, *args, **kwargs):
         self.subtemplates_list = []
 
-        self.document_type = get_object_or_404(
-            klass=DocumentType, pk=self.request.GET.get(
-                'document_type_id', self.request.POST.get('document_type_id')
-            )
-        )
+        self.document_type = self.get_document_type()
 
         AccessControlList.objects.check_access(
             obj=self.document_type, permissions=(permission_document_create,),
@@ -47,6 +43,10 @@ class DocumentUploadInteractiveView(UploadBaseView):
         return super().dispatch(request, *args, **kwargs)
 
     def forms_valid(self, forms):
+        source_backend_instance = self.source.get_backend_instance()
+
+
+        '''
         if getattr(self.source.get_backend(), 'can_uncompress', False):
             if self.source.get_backend_data()['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
                 expand = forms['source_form'].cleaned_data.get('expand')
@@ -57,9 +57,11 @@ class DocumentUploadInteractiveView(UploadBaseView):
                     expand = False
         else:
             expand = False
+        '''
 
+        '''
         try:
-            uploaded_file = self.source.get_backend_instance().get_upload_file_object(
+            uploaded_file = source_backend_instance.get_upload_file_object(
                 form_data=forms['source_form'].cleaned_data
             )
         except SourceException as exception:
@@ -69,8 +71,11 @@ class DocumentUploadInteractiveView(UploadBaseView):
                 file=uploaded_file.file
             )
 
+            #if hasattr(source_backend_instance, 'clean_up_upload_file'):
             try:
-                self.source.clean_up_upload_file(uploaded_file)
+                source_backend_instance.clean_up_upload_file(
+                    upload_file_object=uploaded_file
+                )
             except Exception as exception:
                 messages.error(message=exception, request=self.request)
 
@@ -140,6 +145,43 @@ class DocumentUploadInteractiveView(UploadBaseView):
                 ), self.request.META['QUERY_STRING']
             ),
         )
+    '''
+        try:
+            source_backend_instance.process_document(
+                document_type=self.document_type, forms=forms,
+                request=self.request
+            )
+        except Exception as exception:
+            message = _(
+                'Error processing source document upload; '
+                '%(exception)s'
+            ) % {
+                'exception': exception,
+            }
+            logger.critical(msg=message, exc_info=True)
+            #raise type(exception)(message)
+            if self.request.is_ajax():
+                return JsonResponse(
+                    data={'error': force_text(s=message)}, status=500
+                )
+            else:
+                raise type(exception)(message)
+        else:
+            messages.success(
+                message=_(
+                    'New document queued for upload and will be '
+                    'available shortly.'
+                ), request=self.request
+            )
+
+        return HttpResponseRedirect(
+            redirect_to='{}?{}'.format(
+                reverse(
+                    viewname=self.request.resolver_match.view_name,
+                    kwargs=self.request.resolver_match.kwargs
+                ), self.request.META['QUERY_STRING']
+            ),
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -157,14 +199,12 @@ class DocumentUploadInteractiveView(UploadBaseView):
 
         return context
 
-    #def get_form_classes(self):
-    #    result = {
-    #        'document_form': NewDocumentForm,
-    #    }
-    #    'source_form': self.source.get_backend().upload_form_class
-    #
-    #    return
-
+    def get_document_type(self):
+        return  get_object_or_404(
+            klass=DocumentType, pk=self.request.GET.get(
+                'document_type_id', self.request.POST.get('document_type_id')
+            )
+        )
 
     def get_form_extra_kwargs__document_form(self):
         return {

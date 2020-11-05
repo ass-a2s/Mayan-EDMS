@@ -28,7 +28,7 @@ from .serializers import (
     StagingFolderSerializer
 )
 from .tasks import (
-    task_generate_staging_file_image, task_source_handle_upload
+    task_generate_staging_file_image#, task_source_handle_upload
 )
 
 

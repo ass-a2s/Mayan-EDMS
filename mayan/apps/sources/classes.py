@@ -9,6 +9,7 @@ from furl import furl
 from django.apps import apps
 from django.core.files import File
 from django.core.files.base import ContentFile
+from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.utils import six
 from django.utils.encoding import force_text
@@ -99,6 +100,17 @@ class SourceBackend(
     def get_upload_form_class(cls):
         return cls.upload_form_class
 
+    @classmethod
+    def get_setup_form_schema(cls):
+        result = {
+            'fields': cls.fields,
+            'widgets': getattr(cls, 'widgets', {})
+        }
+        if hasattr(cls, 'field_order'):
+            result['field_order'] = cls.field_order
+
+        return result
+
     def __init__(self, model_instance_id, **kwargs):
         self.model_instance_id = model_instance_id
         self.kwargs = kwargs
@@ -109,6 +121,13 @@ class SourceBackend(
 
     def get_view_context(self, context, request):
         return {}
+
+    def process_document(self, **kwargs):
+        raise NotImplementedError(
+            '%(cls)s is missing the method `process_document`.' % {
+                'cls': self.__class__.__name__
+            }
+        )
 
 
 class NullBackend(SourceBackend):

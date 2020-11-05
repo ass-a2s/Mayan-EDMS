@@ -31,12 +31,44 @@ from .literals import (
     TEST_EMAIL_NO_CONTENT_TYPE_STRING, TEST_EMAIL_ZERO_LENGTH_ATTACHMENT,
     TEST_WATCHFOLDER_SUBFOLDER
 )
-from .mixins import WebFormSourceTestMixin, WatchFolderTestMixin
+from .mixins import (
+    StagingFolderTestMixin, WatchFolderTestMixin, WebFormSourceTestMixin
+)
 from .mocks import MockIMAPServer, MockPOP3Mailbox
 
 
+class StagingFolderSourceTestCase(
+    StagingFolderTestMixin, GenericDocumentTestCase
+):
+    auto_upload_test_document = False
 
-class SourceWatchFolderTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
+    def test_upload_simple_file(self):
+        self._create_test_staging_folder()
+        self._copy_test_document_to_test_staging_folder()
+
+        document_count = Document.objects.count()
+
+        form_data = {
+            'staging_file_id': self.test_staging_folder_file.encoded_filename
+        }
+
+        with self.test_source.get_backend_instance().get_upload_file_object(form_data=form_data) as file_object:
+
+            #with open(file=TEST_COMPRESSED_DOCUMENT_PATH, mode='rb') as file_object:
+            self.test_source.handle_upload(
+                document_type=self.test_document_type,
+                file_object=file_object,
+                #expand=True
+            )
+
+        self.assertEqual(Document.objects.count(), document_count + 1)
+        self.assertEqual(
+            Document.objects.first().file_latest.checksum,
+            TEST_SMALL_DOCUMENT_CHECKSUM
+        )
+
+
+class WatchFolderSourceTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
     auto_upload_test_document = False
 
     def test_upload_simple_file(self):
@@ -145,7 +177,7 @@ class SourceWatchFolderTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
         self.assertEqual(Document.objects.count(), document_count)
 
 
-class SourceWebFormTestCase(WebFormSourceTestMixin, GenericDocumentTestCase):
+class WebFormSourceTestCase(WebFormSourceTestMixin, GenericDocumentTestCase):
     auto_upload_test_document = False
 
     def test_upload_simple_file(self):

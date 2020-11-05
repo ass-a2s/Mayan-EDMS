@@ -21,8 +21,9 @@ from .literals import (
     TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_STAGING_PREVIEW_WIDTH
 )
 
-SOURCE_BACKEND_WEB_FORM_PATH = 'mayan.apps.sources.sources.SourceBackendWebForm'
+SOURCE_BACKEND_STAGING_FOLDER_PATH = 'mayan.apps.sources.sources.SourceBackendStagingFolder'
 SOURCE_BACKEND_WATCHFOLDER_PATH = 'mayan.apps.sources.sources.SourceBackendWatchFolder'
+SOURCE_BACKEND_WEB_FORM_PATH = 'mayan.apps.sources.sources.SourceBackendWebForm'
 
 
 class DocumentUploadIssueTestMixin:
@@ -169,35 +170,54 @@ class StagingFolderFileAPIViewTestMixin:
         )
 
 
-class StagingFolderTestMixin:
+class SourceTestMixin:
+    def _create_test_source(self, backend_path, backend_data=None):
+        self.test_source = Source.objects.create(
+            backend_path=backend_path,
+            backend_data=json.dumps(obj=backend_data),
+            label=TEST_SOURCE_LABEL
+        )
+
+
+class StagingFolderTestMixin(SourceTestMixin):
     def setUp(self):
         super().setUp()
         self.test_staging_folders = []
 
     def tearDown(self):
         for test_staging_folder in self.test_staging_folders:
-            fs_cleanup(filename=test_staging_folder.folder_path)
+            #fs_cleanup(filename=test_staging_folder.folder_path)
+            shutil.rmtree(
+                path=test_staging_folder.get_backend_data()['folder_path']
+            )
             self.test_staging_folders.remove(test_staging_folder)
 
         super().tearDown()
 
-    def _create_test_staging_folder(self):
-        self.test_staging_folder = StagingFolderSource.objects.create(
-            label=TEST_SOURCE_LABEL,
-            folder_path=mkdtemp(),
-            preview_width=TEST_STAGING_PREVIEW_WIDTH,
-            uncompress=SOURCE_UNCOMPRESS_CHOICE_NEVER,
-        )
-        self.test_staging_folders.append(self.test_staging_folder)
-
-    def _copy_test_document(self):
+    def _copy_test_document_to_test_staging_folder(self):
         shutil.copy(
             src=TEST_SMALL_DOCUMENT_PATH,
-            dst=self.test_staging_folder.folder_path
+            dst=self.test_source.get_backend_data()['folder_path']
         )
         self.test_staging_folder_file = list(
-            self.test_staging_folder.get_files()
+            self.test_source.get_backend_instance().get_files()
         )[0]
+
+    def _create_test_staging_folder(self, extra_data=None):
+        backend_data = {
+            'folder_path': mkdtemp(),
+            'preview_width': TEST_STAGING_PREVIEW_WIDTH,
+            'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER
+        }
+
+        if extra_data:
+            backend_data.update(extra_data)
+
+        self._create_test_source(
+            backend_path=SOURCE_BACKEND_STAGING_FOLDER_PATH,
+            backend_data=backend_data
+        )
+        self.test_staging_folders.append(self.test_source)
 
 
 class StagingFolderViewTestMixin:
@@ -270,15 +290,6 @@ class SourceViewTestMixin:
 
     def _request_test_source_list_view(self):
         return self.get(viewname='sources:source_list')
-
-
-class SourceTestMixin:
-    def _create_test_source(self, backend_path, backend_data=None):
-        self.test_source = Source.objects.create(
-            backend_path=backend_path,
-            backend_data=json.dumps(obj=backend_data),
-            label=TEST_SOURCE_LABEL
-        )
 
 
 class WatchFolderTestMixin(SourceTestMixin):

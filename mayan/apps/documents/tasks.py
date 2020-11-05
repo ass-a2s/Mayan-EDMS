@@ -33,9 +33,66 @@ def task_document_stubs_delete():
     logger.info(msg='Finished')
 
 
+@app.task(ignore_results=True)
+def task_document_upload(
+    document_type_id, shared_uploaded_file_id, callback_dotted_path=None,
+    callback_kwargs=None, description=None, label=None,
+    language=None, query_string=None, user_id=None,
+):
+    DocumentType = apps.get_model(
+        app_label='documents', model_name='DocumentType'
+    )
+    SharedUploadedFile = apps.get_model(
+        app_label='storage', model_name='SharedUploadedFile'
+    )
+
+    document_type = DocumentType.objects.get(pk=document_type_id)
+    shared_uploaded_file = SharedUploadedFile.objects.get(
+        pk=shared_uploaded_file_id
+    )
+
+    if user_id:
+        user = get_user_model().objects.get(pk=user_id)
+    else:
+        user = None
+
+    document = None
+    try:
+        with shared_uploaded_file.open() as file_object:
+            document, document_file = document_type.new_document(
+                file_object=file_object, label=label,
+                description=description, language=language,
+                _user=user
+            )
+    except Exception as exception:
+        logger.critical(
+            'Unexpected exception while trying to create new document '
+            '"%s"; %s',
+            label or file_object.name, exception
+        )
+        if document:
+            document.delete(to_trash=False)
+        raise
+    else:
+        shared_uploaded_file.delete()
+
+        if user:
+            document.add_as_recent_document_for_user(user=user)
+
+    if callback_dotted_path:
+        print("@@@@@@@@@callback_dotted_path!!")
+        #callback(
+        #    document=document, document_file=document_file,
+        #    querystring=querystring, user=user
+        #)
+
+
 # Document file
 
-@app.task(bind=True, default_retry_delay=UPDATE_PAGE_COUNT_RETRY_DELAY, ignore_result=True)
+@app.task(
+    bind=True, default_retry_delay=UPDATE_PAGE_COUNT_RETRY_DELAY,
+    ignore_result=True
+)
 def task_document_file_page_count_update(self, document_file_id):
     DocumentFile = apps.get_model(
         app_label='documents', model_name='DocumentFile'
@@ -85,8 +142,14 @@ def task_document_file_page_image_generate(
         raise self.retry(exc=exception)
 
 
-@app.task(bind=True, default_retry_delay=UPLOAD_NEW_VERSION_RETRY_DELAY, ignore_result=True)
-def task_document_file_upload(self, document_id, shared_uploaded_file_id, user_id, action=None, comment=None, filename=None):
+@app.task(
+    bind=True, default_retry_delay=UPLOAD_NEW_VERSION_RETRY_DELAY,
+    ignore_result=True
+)
+def task_document_file_upload(
+    self, document_id, shared_uploaded_file_id, user_id, action=None,
+    comment=None, filename=None
+):
     Document = apps.get_model(
         app_label='documents', model_name='Document'
     )
