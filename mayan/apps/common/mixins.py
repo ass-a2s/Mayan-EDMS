@@ -1,15 +1,19 @@
 import json
+import logging
 
 from django.db import models
 from django.utils.module_loading import import_string
 from django.utils.translation import ugettext_lazy as _
 
+logger = logging.getLogger(name=__name__)
 IMPORT_ERROR_EXCLUSION_TEXTS = (
-    'doesn\'t look like a module path'
+    'doesn\'t look like a module path', 'No module named'
 )
 
 
 class BackendModelMixin(models.Model):
+    _backend_model_null_backend = None
+
     backend_path = models.CharField(
         max_length=128, help_text=_(
             'The dotted Python path to the backend class.'
@@ -28,11 +32,28 @@ class BackendModelMixin(models.Model):
         """
         try:
             return import_string(dotted_path=self.backend_path)
+        except ModuleNotFoundError as exception:
+            logger.error(
+                'ModuleNotFoundError while importing backend: %s; %s',
+                self.backend_path, exception
+            )
+            if self._backend_model_null_backend:
+                return self._backend_model_null_backend
+            else:
+                raise
         except ImportError as exception:
+            logger.error(
+                'ImportError while importing backend: %s; %s',
+                self.backend_path, exception
+            )
             for import_error_exclusion_text in IMPORT_ERROR_EXCLUSION_TEXTS:
                 if import_error_exclusion_text in str(exception):
                     raise
-            return NullBackend
+
+            if self._backend_model_null_backend:
+                return self._backend_model_null_backend
+            else:
+                raise
 
     def get_backend_instance(self):
         return self.get_backend()(
