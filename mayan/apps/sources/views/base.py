@@ -120,8 +120,3 @@ class UploadBaseView(MultiFormView):
             )
         else:
             return self.interactive_sources_enabled.first()
-    #def get_form_extra_kwargs(self, form_name):
-    #    return  {'show_expand': True}#backend_instance.can_uncompress
-
-    #def get_source_form_initial(self):
-    #    return {'show_expand': True}

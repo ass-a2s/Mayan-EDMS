@@ -7,7 +7,7 @@ from rest_framework.reverse import reverse
 
 from mayan.apps.documents.models.document_models import DocumentType
 
-from .models import StagingFolderSource, WebFormSource
+from .models import Source
 
 logger = logging.getLogger(name=__name__)
 
@@ -60,39 +60,21 @@ class StagingFolderFileSerializer(serializers.Serializer):
         )
 
 
-class StagingFolderSerializer(serializers.HyperlinkedModelSerializer):
+class SourceSerializer(serializers.HyperlinkedModelSerializer):
     files = serializers.SerializerMethodField()
 
     class Meta:
         extra_kwargs = {
-            'url': {'view_name': 'rest_api:stagingfolder-detail'},
+            'url': {'view_name': 'rest_api:source-detail'},
         }
-        fields = (
-            'delete_after_upload', 'enabled', 'files', 'folder_path', 'id',
-            'label', 'preview_height', 'preview_width', 'uncompress', 'url'
-        )
-        model = StagingFolderSource
+        fields = ('enabled', 'id', 'label', 'url')
+        model = Source
 
-    def get_files(self, obj):
-        try:
-            return [
-                StagingFolderFileSerializer(entry, context=self.context).data for entry in obj.get_files()
-            ]
-        except Exception as exception:
-            logger.error('unhandled exception: %s', exception)
-            return []
-
-
-class WebFormSourceSerializer(serializers.Serializer):
-    class Meta:
-        model = WebFormSource
-
-
-class DocumentCreateSerializer(serializers.Serializer):
-    source = serializers.IntegerField()
-    document_type = serializers.IntegerField(required=False)
-    description = serializers.CharField(required=False)
-    expand = serializers.BooleanField(default=False)
-    file = serializers.FileField()
-    filename = serializers.CharField(required=False)
-    use_file_name = serializers.BooleanField(default=False)
+    #def get_files(self, obj):
+    #    try:
+    #        return [
+    #            StagingFolderFileSerializer(entry, context=self.context).data for entry in obj.get_files()
+    #        ]
+    #    except Exception as exception:
+    #        logger.error('unhandled exception: %s', exception)
+    #        return []

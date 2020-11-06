@@ -17,7 +17,7 @@ from mayan.apps.storage.models import SharedUploadedFile
 from .literals import (
     STAGING_FILE_IMAGE_TASK_TIMEOUT, STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
 )
-from .models import Source, StagingFolderSource
+from .models import Source#, StagingFolderSource
 from .permissions import (
     permission_sources_create, permission_sources_delete,
     permission_sources_edit, permission_sources_view,
@@ -25,7 +25,7 @@ from .permissions import (
 )
 from .serializers import (
     StagingFolderFileSerializer, StagingFolderFileUploadSerializer,
-    StagingFolderSerializer
+    SourceSerializer
 )
 from .tasks import (
     task_generate_staging_file_image#, task_source_handle_upload
@@ -53,27 +53,28 @@ class APIStagingSourceFileView(generics.RetrieveDestroyAPIView):
         )
 
 
-class APIStagingSourceListView(generics.ListCreateAPIView):
+class APISourceListView(generics.ListCreateAPIView):
     """
-    get: Returns a list of all the staging folders and the files they contain.
-    post: Create a new staging folders.
+    get: Returns a list of all the source.
+    post: Create a new source.
     """
     mayan_view_permissions = {
         'GET': (permission_sources_view,),
         'POST': (permission_sources_create,)
     }
-    queryset = Source.objects.filter(
-        backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
-    )
-    serializer_class = StagingFolderSerializer
+    queryset = Source.objects.all()
+    #filter(
+    #    backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
+    #)
+    serializer_class = SourceSerializer
 
 
-class APIStagingSourceView(generics.RetrieveUpdateDestroyAPIView):
+class APISourceView(generics.RetrieveUpdateDestroyAPIView):
     """
-    delete: Delete the selected staging folders.
-    get: Details of the selected staging folders and the files it contains.
-    patch: Edit the selected staging folders.
-    put: Edit the selected staging folders.
+    delete: Delete the selected source.
+    get: Details of the selected source.
+    patch: Edit the selected source.
+    put: Edit the selected source.
     """
     mayan_object_permissions = {
         'DELETE': (permission_sources_delete,),
@@ -81,10 +82,11 @@ class APIStagingSourceView(generics.RetrieveUpdateDestroyAPIView):
         'PATCH': (permission_sources_edit,),
         'PUT': (permission_sources_edit,)
     }
-    queryset = Source.objects.filter(
-        backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
-    )
-    serializer_class = StagingFolderSerializer
+    queryset = Source.objects.all()#(
+    #queryset = Source.objects.filter(
+    #    backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
+    #)
+    serializer_class = SourceSerializer
 
 
 class APIStagingSourceFileImageView(generics.RetrieveAPIView):

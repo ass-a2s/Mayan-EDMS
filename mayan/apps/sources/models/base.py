@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.core.files import File
 from django.db import models, transaction
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
@@ -17,24 +18,18 @@ from mayan.apps.storage.exceptions import NoMIMETypeMatch
 from mayan.apps.storage.models import SharedUploadedFile
 
 ## Remove DEFAULT_INTERVAL import
+from ..classes import SourceBackendNull
 from ..literals import DEFAULT_INTERVAL, SOURCE_UNCOMPRESS_CHOICES
+from ..managers import SourceManager
 from ..wizards import WizardStep
 
 logger = logging.getLogger(name=__name__)
 
 
-#TODO: Move to managers.py
-class SourceManager(models.Manager):
-    def interactive(self):
-        interactive_sources_ids = []
-        for source in self.all():
-            if getattr(source.get_backend(), 'is_interactive', False):
-                interactive_sources_ids.append(source.pk)
-
-        return self.filter(id__in=interactive_sources_ids)
-
-
+#TODO: move this to ../models.py
 class Source(BackendModelMixin, models.Model):
+    _backend_model_null_backend = SourceBackendNull
+
     label = models.CharField(
         db_index=True, help_text=_('A short text to describe this source.'),
         max_length=128, unique=True, verbose_name=_('Label')
@@ -50,29 +45,24 @@ class Source(BackendModelMixin, models.Model):
 
     @staticmethod
     def callback_post_task_document_upload(
-        source_id, **kwargs#document, document_file, query_string, user=None
+        document_file, query_string, source_id, user=None
     ):
-        print("CALLLBACK!")
-        """
+        source = Source.objects.get(pk=source_id)
+
         if user:
-            document.add_as_recent_document_for_user(user=user)
+            document_file.document.add_as_recent_document_for_user(user=user)
 
         layer_saved_transformations.copy_transformations(
-            source=self, targets=document_file.pages.all()
+            source=source, targets=document_file.pages.all()
         )
         WizardStep.post_upload_process(
-            document=document, querystring=querystring
+            document=document_file.document, query_string=query_string
         )
-        #TODO: source backend callback
-        self.
-        """
+
+        #TODO: call source backend callback
 
     def __str__(self):
         return '%s' % self.label
-
-    #def clean_up_upload_file(self, upload_file_object):
-    #    pass
-    #    # TODO: Should raise NotImplementedError?
 
     def delete(self, *args, **kwargs):
         with transaction.atomic():
@@ -82,10 +72,6 @@ class Source(BackendModelMixin, models.Model):
     def fullname(self):
         #return ' '.join([self.class_fullname(), '"%s"' % self.label])
         return '{} {}'.format(self.get_backend_label(), self.label)
-
-    #def get_upload_file_object(self, form_data):
-    #    pass
-    #    # TODO: Should raise NotImplementedError?
 
     def handle_file_object_upload(
         self, document_type, file_object, description=None, expand=False,
@@ -144,8 +130,6 @@ class Source(BackendModelMixin, models.Model):
                 # Fallthrough to same code path as expand=False to avoid
                 # duplicating code.
 
-        from django.core.files import File
-
         shared_uploaded_file = SharedUploadedFile.objects.create(
             file=File(file_object)
         )
@@ -164,7 +148,8 @@ class Source(BackendModelMixin, models.Model):
                 'language': language,
                 'query_string': query_string,
                 'user_id': user_id,
-                'callback_dotted_path': 'mayan.apps.sources.models.Source.callback_post_task_document_upload',
+                'callback_dotted_path': 'mayan.apps.sources.models.base.Source',
+                'callback_function': 'callback_post_task_document_upload',
                 'callback_kwargs': {
                     'source_id': self.pk,
                 }
@@ -185,50 +170,10 @@ class Source(BackendModelMixin, models.Model):
         #return documents
 
 
-
     def save(self, *args, **kwargs):
         with transaction.atomic():
             #self.get_backend_instance().save()
             super().save(*args, **kwargs)
-
-    #def upload_document(
-    #    self, file_object, document_type, description=None, label=None,
-    #    language=None, querystring=None, user=None
-    #):
-        """
-        Upload an individual document
-        """
-        """
-        document = None
-        try:
-
-            document, document_file = document_type.new_document(
-                file_object=file_object, label=label,
-                description=description, language=language,
-                _user=user
-            )
-        except Exception as exception:
-            logger.critical(
-                'Unexpected exception while trying to create new document '
-                '"%s" from source "%s"; %s',
-                label or file_object.name, self, exception
-            )
-            if document:
-                document.delete(to_trash=False)
-            raise
-        else:
-            if user:
-                document.add_as_recent_document_for_user(user=user)
-
-            layer_saved_transformations.copy_transformations(
-                source=self, targets=document_file.pages.all()
-            )
-            WizardStep.post_upload_process(
-                document=document, querystring=querystring
-            )
-            return document
-        """
-
 
 
 class InteractiveSource(Source):

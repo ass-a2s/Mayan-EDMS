@@ -75,7 +75,7 @@ class SourceBackendBase(AppsModuleLoaderMixin):
 class SourceBackend(
     six.with_metaclass(SourceBackendMetaclass, SourceBackendBase)
 ):
-    _loader_module_name = 'sources'
+    _loader_module_name = 'source_backends'
     upload_form_class = None
 
     @classmethod
@@ -130,7 +130,7 @@ class SourceBackend(
         )
 
 
-class NullBackend(SourceBackend):
+class SourceBackendNull(SourceBackend):
     label = _('Null backend')
 
 

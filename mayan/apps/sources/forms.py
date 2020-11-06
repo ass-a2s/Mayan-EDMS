@@ -12,10 +12,7 @@ from mayan.apps.documents.literals import DOCUMENT_FILE_ACTION_PAGE_CHOICES
 from mayan.apps.views.forms import DynamicModelForm
 
 from .classes import SourceBackend
-from .models import (
-    IMAPEmail, POP3Email, Source, StagingFolderSource,
-    WebFormSource, WatchFolderSource
-)
+from .models import Source
 
 logger = logging.getLogger(name=__name__)
 

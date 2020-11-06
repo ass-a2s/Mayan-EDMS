@@ -2,8 +2,8 @@ from django.conf.urls import url
 
 from .api_views import (
     APIStagingSourceFileView, APIStagingSourceFileImageView,
-    APIStagingSourceFileUploadView, APIStagingSourceListView,
-    APIStagingSourceView
+    APIStagingSourceFileUploadView, APISourceListView,
+    APISourceView
 )
 from .views.document_file_views import DocumentFileUploadInteractiveView
 from .views.document_views import DocumentUploadInteractiveView
@@ -94,11 +94,11 @@ api_urls = [
         view=APIStagingSourceFileView.as_view()
     ),
     url(
-        regex=r'^staging_folders/$', name='stagingfolder-list',
-        view=APIStagingSourceListView.as_view()
+        regex=r'^sources/$', name='source-list',
+        view=APISourceListView.as_view()
     ),
     url(
-        regex=r'^staging_folders/(?P<pk>[0-9]+)/$',
-        name='stagingfolder-detail', view=APIStagingSourceView.as_view()
+        regex=r'^sources/(?P<pk>[0-9]+)/$',
+        name='source-detail', view=APISourceView.as_view()
     )
 ]

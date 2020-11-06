@@ -5,7 +5,7 @@ from mayan.apps.views.http import URL
 from .models import DocumentMetadata, MetadataType
 
 
-def decode_metadata_from_querystring(querystring=None):
+def decode_metadata_from_query_string(query_string=None):
     """
     Parse a URL query string to a list of metadata
     """
@@ -14,9 +14,9 @@ def decode_metadata_from_querystring(querystring=None):
         'value': {}
     }
     metadata_list = []
-    if querystring:
+    if query_string:
         # Match out of order metadata_type ids with metadata values from request
-        for key, value in URL(query_string=querystring).args.items():
+        for key, value in URL(query_string=query_string).args.items():
             if 'metadata' in key:
                 index, element = key[8:].split('_')
                 metadata_dict[element][index] = value

@@ -61,10 +61,10 @@ class WizardStep:
         return {}
 
     @classmethod
-    def post_upload_process(cls, document, querystring=None):
+    def post_upload_process(cls, document, query_string=None):
         for step in cls.get_all():
             step.step_post_upload_process(
-                document=document, querystring=querystring
+                document=document, query_string=query_string
             )
 
     @classmethod
@@ -86,7 +86,7 @@ class WizardStep:
         cls._deregistry = {}
 
     @classmethod
-    def step_post_upload_process(cls, document, querystring=None):
+    def step_post_upload_process(cls, document, query_string=None):
         pass
 
 
@@ -146,16 +146,6 @@ class DocumentCreateWizard(SessionWizardView):
         self.form_list = result['form_list']
         self.condition_dict = result['condition_dict']
 
-        #interactive_sources_ids = []
-        #for source in Source.objects.filter(enabled=True):
-        #    if getattr(source.get_backend(), 'is_interactive', False):
-        #        interactive_sources_ids.append(source.pk)
-
-        #interactive_sources = Source.objects.filter(
-        #    id__in=interactive_sources_ids
-        #)
-
-        #if not interactive_sources.exists():
         if not Source.objects.interactive().filter(enabled=True).exists():
             messages.error(
                 message=_(

@@ -3,6 +3,7 @@ import logging
 from django.apps import apps
 from django.contrib.auth import get_user_model
 from django.db import OperationalError
+from django.utils.module_loading import import_string
 from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.lock_manager.exceptions import LockError
@@ -36,8 +37,8 @@ def task_document_stubs_delete():
 @app.task(ignore_results=True)
 def task_document_upload(
     document_type_id, shared_uploaded_file_id, callback_dotted_path=None,
-    callback_kwargs=None, description=None, label=None,
-    language=None, query_string=None, user_id=None,
+    callback_function=None, callback_kwargs=None, description=None,
+    label=None, language=None, query_string=None, user_id=None
 ):
     DocumentType = apps.get_model(
         app_label='documents', model_name='DocumentType'
@@ -80,11 +81,13 @@ def task_document_upload(
             document.add_as_recent_document_for_user(user=user)
 
     if callback_dotted_path:
-        print("@@@@@@@@@callback_dotted_path!!")
-        #callback(
-        #    document=document, document_file=document_file,
-        #    querystring=querystring, user=user
-        #)
+        callback = import_string(dotted_path=callback_dotted_path)
+        callback_kwargs = callback_kwargs or {}
+        function = getattr(callback, callback_function)
+        function(
+            document_file=document_file, query_string=query_string, user=user,
+            **callback_kwargs
+        )
 
 
 # Document file
