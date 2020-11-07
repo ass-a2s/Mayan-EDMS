@@ -9,13 +9,16 @@ from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.acls.models import AccessControlList
 from mayan.apps.documents.literals import DOCUMENT_FILE_ACTION_PAGES_NEW
-from mayan.apps.documents.models import Document, DocumentFile
+from mayan.apps.documents.models.document_models import Document
+from mayan.apps.documents.models.document_file_models import DocumentFile
 from mayan.apps.documents.permissions import permission_document_file_new
 from mayan.apps.documents.tasks import task_document_file_upload
 from mayan.apps.storage.models import SharedUploadedFile
+from mayan.apps.views.mixins import ExternalObjectMixin
 
 from ..exceptions import SourceException
-from ..forms import NewFileForm
+from ..forms import NewDocumentFileForm
+from ..models import Source
 
 from .base import UploadBaseView
 
@@ -23,23 +26,21 @@ __all__ = ('DocumentFileUploadInteractiveView',)
 logger = logging.getLogger(name=__name__)
 
 
-class DocumentFileUploadInteractiveView(UploadBaseView):
-    document_form = NewFileForm
+class DocumentFileUploadInteractiveView(ExternalObjectMixin, UploadBaseView):
+    document_form = NewDocumentFileForm
+    external_object_class = Document
+    external_object_permission = permission_document_file_new
+    external_object_pk_url_kwarg = 'document_id'
 
     def dispatch(self, request, *args, **kwargs):
         self.subtemplates_list = []
 
-        self.document = self.get_document()
-
-        AccessControlList.objects.check_access(
-            obj=self.document, permissions=(permission_document_file_new,),
-            user=self.request.user
-        )
+        result = super().dispatch(request, *args, **kwargs)
 
         try:
             DocumentFile.execute_pre_create_hooks(
                 kwargs={
-                    'document': self.document,
+                    'document': self.external_object,
                     'shared_uploaded_file': None,
                     'user': self.request.user
                 }
@@ -49,95 +50,63 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
                 message=_(
                     'Unable to upload new files for document '
                     '"%(document)s". %(exception)s'
-                ) % {'document': self.document, 'exception': exception},
+                ) % {'document': self.external_object, 'exception': exception},
                 request=self.request
             )
             return HttpResponseRedirect(
                 redirect_to=reverse(
                     viewname='documents:document_file_list',
-                    kwargs={'document_id': self.document.pk}
+                    kwargs={'document_id': self.external_object.pk}
                 )
             )
 
-        self.tab_links = UploadBaseView.get_active_tab_links(
-            document=self.document
-        )
-
-        return super().dispatch(request, *args, **kwargs)
+        return result
 
     def forms_valid(self, forms):
+        source_backend_instance = self.source.get_backend_instance()
+
         try:
-            uploaded_file = self.source.get_backend_instance().get_upload_file_object(
-                form_data=forms['source_form'].cleaned_data
+            source_backend_instance.process_document_file(
+                document=self.external_object, forms=forms,
+                request=self.request
             )
-        except SourceException as exception:
-            messages.error(message=exception, request=self.request)
+        except Exception as exception:
+            message = _(
+                'Error executing document file upload task; '
+                '%(exception)s'
+            ) % {
+                'exception': exception,
+            }
+            logger.critical(msg=message, exc_info=True)
+            if self.request.is_ajax():
+                return JsonResponse(
+                    data={'error': force_text(s=message)}, status=500
+                )
+            else:
+                raise type(exception)(message)
         else:
-            shared_uploaded_file = SharedUploadedFile.objects.create(
-                file=uploaded_file.file
+            messages.success(
+                message=_(
+                    'New document file queued for upload and will be '
+                    'available shortly.'
+                ), request=self.request
             )
-
-            try:
-                self.source.clean_up_upload_file(uploaded_file)
-            except Exception as exception:
-                messages.error(message=exception, request=self.request)
-
-            if not self.request.user.is_anonymous:
-                user = self.request.user
-                user_id = self.request.user.pk
-            else:
-                user = None
-                user_id = None
-
-            try:
-                DocumentFile.execute_pre_create_hooks(
-                    kwargs={
-                        'document': self.document,
-                        'shared_uploaded_file': shared_uploaded_file,
-                        'user': user
-                    }
-                )
-
-                task_document_file_upload.apply_async(
-                    kwargs={
-                        'action': int(
-                            forms['document_form'].cleaned_data.get('action')
-                        ),
-                        'comment': forms['document_form'].cleaned_data.get('comment'),
-                        'document_id': self.document.pk,
-                        'shared_uploaded_file_id': shared_uploaded_file.pk,
-                        'user_id': user_id
-                    }
-                )
-            except Exception as exception:
-                message = _(
-                    'Error executing document file upload task; '
-                    '%(exception)s'
-                ) % {
-                    'exception': exception,
-                }
-                logger.critical(msg=message, exc_info=True)
-                if self.request.is_ajax():
-                    return JsonResponse(
-                        data={'error': force_text(s=message)}, status=500
-                    )
-                else:
-                    raise type(exception)(message)
-            else:
-                messages.success(
-                    message=_(
-                        'New document file queued for upload and will be '
-                        'available shortly.'
-                    ), request=self.request
-                )
 
         return HttpResponseRedirect(
             redirect_to=reverse(
                 viewname='documents:document_file_list', kwargs={
-                    'document_id': self.document.pk
+                    'document_id': self.external_object.pk
                 }
             )
         )
+
+    def get_active_tab_links(self):
+        return [
+            UploadBaseView.get_tab_link_for_source(
+                source=source, document=self.external_object
+            )
+            for source in Source.objects.interactive().filter(enabled=True)
+        ]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -149,15 +118,14 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
                         kwargs=self.request.resolver_match.kwargs
                     ), self.request.META['QUERY_STRING']
                 ),
-                'object': self.document,
+                'object': self.external_object,
                 'title': _(
                     'Upload a new file for document "%(document)s" '
                     'from source: %(source)s'
-                ) % {'document': self.document, 'source': self.source.label},
+                ) % {'document': self.external_object, 'source': self.source.label},
                 'submit_label': _('Submit')
             }
         )
-
         context.update(
             self.source.get_backend_instance().get_view_context(
                 context=context, request=self.request
@@ -165,11 +133,6 @@ class DocumentFileUploadInteractiveView(UploadBaseView):
         )
 
         return context
-
-    def get_document(self):
-        return get_object_or_404(
-            klass=Document, pk=kwargs['document_id']
-        )
 
     def get_form_extra_kwargs__source_form(self, **kwargs):
         return {

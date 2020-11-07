@@ -14,21 +14,22 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.appearance.classes import Icon
+from mayan.apps.documents.literals import DOCUMENT_FILE_ACTION_PAGES_NEW
 from mayan.apps.documents.models.document_models import Document
 from mayan.apps.documents.models.document_file_models import DocumentFile
 from mayan.apps.documents.models.document_type_models import DocumentType
+from mayan.apps.documents.permissions import permission_document_file_new
+from mayan.apps.documents.tasks import task_document_file_upload
 from mayan.apps.common.serialization import yaml_load
 from mayan.apps.common.validators import YAMLValidator
 from mayan.apps.storage.models import SharedUploadedFile
 from mayan.apps.storage.utils import TemporaryFile
 
 from ..exceptions import SourceException
-#from ..forms import StagingUploadForm, WebFormUploadFormHTML5
 from ..literals import (
     DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
     SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_ASK
 )
-#from ..settings import setting_scanimage_path
 from ..tasks import task_process_document_upload
 
 
@@ -104,7 +105,7 @@ class SourceBackendInteractiveMixin:
                     forms['document_form'].cleaned_data.get('action')
                 ),
                 'comment': forms['document_form'].cleaned_data.get('comment'),
-                'document_id': self.document.pk,
+                'document_id': document.pk,
                 'shared_uploaded_file_id': shared_uploaded_file.pk,
                 'user_id': user_id
             }

@@ -42,39 +42,6 @@ from .mixins import SourceBackendMixinPeriodic
 logger = logging.getLogger(name=__name__)
 
 
-#interactive
-#label, enabled, uncompress
-
-#periodic
-#label, enabled, uncompress, document type, interval
-
-
-# webforms - interactive
-
-# staging folders - interactive
-# folder path, preview width, preview height, delete after upload
-
-# SANE - interactive
-# device name, mode, resolution, paper source, adf mode
-
-# POP3 - periodic
-# host, ssl, port, username, password, metadata attachment name,
-# subject metadata, from metadata, store body, timeout
-
-# IMAP - periodic
-# host, ssl, port, username, password, metadata attachment name,
-# subject metadata, from metadata, store body, timeout
-# Mailbox, search criteria, store comands, destination mailbox, expunge.
-
-# watchfolder - periodic
-# folder path, include subdirectories
-
-
-# ToDO: ACTION after upload
-# - Delete
-# - Move to folder
-
-
 class SourceBackendWatchFolder(SourceBackendMixinPeriodic, SourceBackend):
     can_uncompress = True
     field_order = (
@@ -125,9 +92,6 @@ class SourceBackendWatchFolder(SourceBackendMixinPeriodic, SourceBackend):
                 'If checked, not only will the folder path be scanned for '
                 'files but also its subdirectories.'
             ),
-            #'kwargs': {
-            #    'max_length': 255,
-            #},
             'label': _('Include subdirectories?'),
             'required': False
         },

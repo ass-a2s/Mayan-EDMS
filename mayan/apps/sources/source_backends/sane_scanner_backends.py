@@ -26,10 +26,6 @@ from ..classes import (
     PseudoFile, SourceBackend, SourceUploadedFile, StagingFile
 )
 from ..exceptions import SourceException
-from ..forms import (
-    #SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5
-    StagingUploadForm, WebFormUploadFormHTML5
-)
 from ..literals import (
     DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
     SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_ASK
@@ -43,30 +39,8 @@ logger = logging.getLogger(name=__name__)
 #interactive
 #label, enabled, uncompress
 
-#periodic
-#label, enabled, uncompress, document type, interval
-
-
-# webforms - interactive
-
-# staging folders - interactive
-# folder path, preview width, preview height, delete after upload
-
 # SANE - interactive
 # device name, mode, resolution, paper source, adf mode
-
-# POP3 - periodic
-# host, ssl, port, username, password, metadata attachment name,
-# subject metadata, from metadata, store body, timeout
-
-# IMAP - periodic
-# host, ssl, port, username, password, metadata attachment name,
-# subject metadata, from metadata, store body, timeout
-# Mailbox, search criteria, store comands, destination mailbox, expunge.
-
-# watchfolder - periodic
-# folder path, include subdirectories
-
 
 # ToDO: ACTION after upload
 # - Delete
@@ -100,7 +74,6 @@ class SourceBackendSANEScanner(SourceBackend):
     }
     is_interactive = True
     label = _('SANE Scanner')
-    #upload_form_class = SaneScannerUploadForm
     widgets = {
         'arguments': {
             'class': 'django.forms.widgets.Textarea', 'kwargs': {

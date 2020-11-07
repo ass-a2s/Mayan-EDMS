@@ -99,9 +99,6 @@ class Source(BackendModelMixin, models.Model):
                 compressed_file = Archive.open(file_object=file_object)
                 for compressed_file_member in compressed_file.members():
                     with compressed_file.open_member(filename=compressed_file_member) as compressed_file_member_file_object:
-                        #kwargs.update(
-                        #    {'label': force_text(s=compressed_file_child)}
-                        #)
                         # Recursive call to expand nested compressed files
                         # expand=True literal for recursive nested files.
                         # Might cause problem with office files inside a
@@ -116,12 +113,6 @@ class Source(BackendModelMixin, models.Model):
                             query_string=query_string,
                             user=user
                         )
-
-                        #documents.append(
-                        #    self.upload_document(
-                        #        file_object=file_object, **kwargs
-                        #    )
-                        #)
 
                 # Avoid executing the expand=False code path.
                 return
@@ -161,27 +152,14 @@ class Source(BackendModelMixin, models.Model):
             #    language=None, querystring=None, user=None, callback=None
             #):
 
-            #documents.append(
-            #    self.upload_document(file_object=file_object, **kwargs)
-            #)
-
         # Return a list of newly created documents. Used by the email source
         # to assign the from and subject metadata values.
         #return documents
-
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
             #self.get_backend_instance().save()
             super().save(*args, **kwargs)
-
-
-class InteractiveSource(Source):
-    objects = InheritanceManager()
-
-    class Meta:
-        verbose_name = _('Interactive source')
-        verbose_name_plural = _('Interactive sources')
 
 
 class OutOfProcessSource(Source):

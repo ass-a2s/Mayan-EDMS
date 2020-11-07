@@ -148,7 +148,6 @@ class SourcesApp(MayanAppConfig):
         )
         menu_secondary.bind_links(
             links=(
-                #link_source_list,
                 link_source_backend_selection,
             ), sources=(
                 Source,

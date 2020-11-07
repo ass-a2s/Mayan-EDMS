@@ -25,15 +25,6 @@ class UploadBaseView(MultiFormView):
     template_name = 'appearance/generic_form.html'
 
     @staticmethod
-    def get_active_tab_links(document=None):
-        return [
-            UploadBaseView.get_tab_link_for_source(
-                source=source, document=document
-            )
-            for source in Source.objects.interactive().filter(enabled=True)
-        ]
-
-    @staticmethod
     def get_tab_link_for_source(source, document=None):
         if document:
             view = 'sources:document_file_upload'
@@ -80,6 +71,9 @@ class UploadBaseView(MultiFormView):
             else:
                 raise
 
+    def get_active_tab_links(self):
+        return ()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
@@ -92,12 +86,13 @@ class UploadBaseView(MultiFormView):
             )
         )
 
+        active_link = self.get_active_tab_links()
         menu_sources.bound_links[
             'sources:document_upload_interactive'
-        ] = self.tab_links
+        ] = active_link
         menu_sources.bound_links[
             'sources:document_file_upload'
-        ] = self.tab_links
+        ] = active_link
 
         return context
 

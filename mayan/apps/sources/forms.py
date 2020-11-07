@@ -22,7 +22,7 @@ class NewDocumentForm(DocumentForm):
         exclude = ('label', 'description')
 
 
-class NewFileForm(forms.Form):
+class NewDocumentFileForm(forms.Form):
     comment = forms.CharField(
         help_text=_('An optional comment to explain the upload.'),
         label=_('Comment'), required=False,
@@ -129,12 +129,7 @@ class SourceBackendDynamicForm(DynamicModelForm):
         #    form_data=data, request=self.request
         #)
         data['backend_data'] = json.dumps(obj=backend_data)
-        #data['backend_data'] = json.dumps(obj=backend_data)
         return data
-
-
-#class WebFormUploadForm(UploadBaseForm):
-#    file = forms.FileField(label=_('File'))
 
 
 class WebFormUploadFormHTML5(UploadBaseForm):
@@ -143,7 +138,3 @@ class WebFormUploadFormHTML5(UploadBaseForm):
             attrs={'class': 'hidden', 'hidden': True}
         )
     )
-
-
-#class SaneScannerUploadForm(UploadBaseForm):
-#    pass

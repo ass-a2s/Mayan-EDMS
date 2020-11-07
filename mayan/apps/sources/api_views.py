@@ -32,27 +32,6 @@ from .tasks import (
 )
 
 
-class APIStagingSourceFileView(generics.RetrieveDestroyAPIView):
-    """
-    get: Details of the selected staging file.
-    """
-    serializer_class = StagingFolderFileSerializer
-
-    def get_object(self):
-        if self.request.method == 'DELETE':
-            Permission.check_user_permissions(
-                permissions=(permission_staging_file_delete,),
-                user=self.request.user
-            )
-
-        staging_folder = get_object_or_404(
-            klass=Source, pk=self.kwargs['staging_folder_pk']
-        ).get_backend_instance()
-        return staging_folder.get_file(
-            encoded_filename=self.kwargs['encoded_filename']
-        )
-
-
 class APISourceListView(generics.ListCreateAPIView):
     """
     get: Returns a list of all the source.
@@ -87,6 +66,27 @@ class APISourceView(generics.RetrieveUpdateDestroyAPIView):
     #    backend_path='mayan.apps.sources.sources.SourceBackendStagingFolder'
     #)
     serializer_class = SourceSerializer
+
+
+class APIStagingSourceFileView(generics.RetrieveDestroyAPIView):
+    """
+    get: Details of the selected staging file.
+    """
+    serializer_class = StagingFolderFileSerializer
+
+    def get_object(self):
+        if self.request.method == 'DELETE':
+            Permission.check_user_permissions(
+                permissions=(permission_staging_file_delete,),
+                user=self.request.user
+            )
+
+        staging_folder = get_object_or_404(
+            klass=Source, pk=self.kwargs['staging_folder_pk']
+        ).get_backend_instance()
+        return staging_folder.get_file(
+            encoded_filename=self.kwargs['encoded_filename']
+        )
 
 
 class APIStagingSourceFileImageView(generics.RetrieveAPIView):
