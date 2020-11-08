@@ -122,7 +122,10 @@ class DocumentFileUploadInteractiveView(ExternalObjectMixin, UploadBaseView):
                 'title': _(
                     'Upload a new file for document "%(document)s" '
                     'from source: %(source)s'
-                ) % {'document': self.external_object, 'source': self.source.label},
+                ) % {
+                    'document': self.external_object,
+                    'source': self.source.label
+                },
                 'submit_label': _('Submit')
             }
         )

@@ -27,7 +27,6 @@ from ..classes import (
 )
 from ..exceptions import SourceException
 from ..forms import (
-    #SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5
     StagingUploadForm, WebFormUploadFormHTML5
 )
 from ..literals import (
@@ -37,30 +36,19 @@ from ..literals import (
 from ..settings import setting_scanimage_path
 from ..tasks import task_process_document_upload
 
-from .mixins import SourceBackendMixinPeriodic
+from .mixins import SourceBackendCompressedMixin, SourceBackendPeriodicMixin
 
 logger = logging.getLogger(name=__name__)
 
 
-class SourceBackendWatchFolder(SourceBackendMixinPeriodic, SourceBackend):
-    can_uncompress = True
+class SourceBackendWatchFolder(
+    SourceBackendCompressedMixin, SourceBackendPeriodicMixin, SourceBackend
+):
     field_order = (
-        'uncompress', 'interval', 'document_type_id', 'folder_path',
+        'interval', 'document_type_id', 'folder_path',
         'include_subdirectories',
     )
     fields = {
-        'uncompress': {
-            'class': 'django.forms.ChoiceField',
-            'default': '',
-            'help_text': _(
-                'Whether to expand or not compressed archives.'
-            ),
-            'kwargs': {
-                'choices': SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-            },
-            'label': _('Uncompress'),
-            'required': True
-        },
         'interval': {
             'class': 'django.forms.IntegerField',
             'default': DEFAULT_INTERVAL,
@@ -110,13 +98,6 @@ class SourceBackendWatchFolder(SourceBackendMixinPeriodic, SourceBackend):
         }
     }
     label = _('Watch folder')
-    widgets = {
-        'uncompress': {
-            'class': 'django.forms.widgets.Select', 'kwargs': {
-                'attrs': {'class': 'select2'},
-            }
-        }
-    }
 
     def _check_source(self, test=False):
         path = Path(self.kwargs['folder_path'])

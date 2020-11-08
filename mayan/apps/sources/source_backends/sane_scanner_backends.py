@@ -1,13 +1,13 @@
 import errno
-import fcntl
 import json
 import logging
 import os
-from pathlib import Path
 import subprocess
 
+import sh
+
 from django.apps import apps
-from django.db import transaction
+from django.core.files import File
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django.utils.timezone import now
@@ -20,18 +20,13 @@ from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.common.serialization import yaml_load
 from mayan.apps.common.validators import YAMLValidator
 from mayan.apps.storage.models import SharedUploadedFile
-from mayan.apps.storage.utils import TemporaryFile
+from mayan.apps.storage.utils import NamedTemporaryFile, TemporaryFile
 
-from ..classes import (
-    PseudoFile, SourceBackend, SourceUploadedFile, StagingFile
-)
+from ..classes import PseudoFile, SourceBackend, SourceUploadedFile
 from ..exceptions import SourceException
-from ..literals import (
-    DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-    SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_ASK
-)
 from ..settings import setting_scanimage_path
-from ..tasks import task_process_document_upload
+
+from .mixins import SourceBackendInteractiveMixin
 
 logger = logging.getLogger(name=__name__)
 
@@ -47,7 +42,7 @@ logger = logging.getLogger(name=__name__)
 # - Move to folder
 
 
-class SourceBackendSANEScanner(SourceBackend):
+class SourceBackendSANEScanner(SourceBackendInteractiveMixin, SourceBackend):
     can_uncompress = True
     field_order = ('device_name', 'arguments')
     fields = {
@@ -83,7 +78,7 @@ class SourceBackendSANEScanner(SourceBackend):
             }
         }
     }
-
+    '''
     def execute_command(self, arguments):
         command_line = [
             setting_scanimage_path.value
@@ -120,8 +115,11 @@ class SourceBackendSANEScanner(SourceBackend):
                 stdout_file_object.seek(0)
                 self.get_model_instance().error_log.all().delete()
                 return stdout_file_object
-
+    '''
+    '''
     def get_form_upload_file_object(self, form_data):
+        NamedTemporaryFile
+
         arguments = [
             '-d', self.kwargs['device_name'], '--format', 'tiff',
         ]
@@ -137,12 +135,44 @@ class SourceBackendSANEScanner(SourceBackend):
                 file=file_object, name='scan {}'.format(now())
             )
         )
+    '''
+
+    def get_shared_uploaded_file(self, forms):
+        command_scanimage = sh.Command(path=setting_scanimage_path.value)
+
+        with NamedTemporaryFile() as file_object:
+            command_scanimage = command_scanimage.bake(
+                device_name=self.kwargs['device_name'],
+                format='tiff', output_file=file_object.name
+            )
+            command_scanimage()
+
+            file_object.seek(0)
+
+            return SharedUploadedFile.objects.create(
+                file=File(file=file_object), filename='scan {}'.format(
+                    now()
+                )
+            )
+
+
+        #arguments = [
+        #    '--device-name', self.kwargs['device_name'], '--format', 'tiff', '--output-file', 222
+        #]
+        #command_scanimage(device_name='epson2:net:192.168.11.50', format='tiff', output_file='/tmp/test')
+
+        #uploaded_file = self.get_form_upload_file_object(
+        #    form_data=forms['source_form'].cleaned_data
+        #)
+        #return SharedUploadedFile.objects.create(
+        #    file=uploaded_file.file
+        #)
 
     def get_view_context(self, context, request):
         return {
             'subtemplates_list': [
                 {
-                    'name': 'sources/upload_multiform_subtemplate.html',
+                    'name': 'appearance/generic_multiform_subtemplate.html',
                     'context': {
                         'forms': context['forms'],
                         'is_multipart': True,

@@ -108,6 +108,8 @@ class SourceBackend(
         }
         if hasattr(cls, 'field_order'):
             result['field_order'] = cls.field_order
+        else:
+            result['field_order'] = ()
 
         return result
 
@@ -118,6 +120,9 @@ class SourceBackend(
     def get_model_instance(self):
         Source = apps.get_model(app_label='sources', model_name='Source')
         return Source.objects.get(pk=self.model_instance_id)
+
+    def get_task_extra_kwargs(self):
+        return {}
 
     def get_view_context(self, context, request):
         return {}

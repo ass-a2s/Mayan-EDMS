@@ -1,43 +1,18 @@
-import errno
-import fcntl
-import json
 import logging
 import os
-from pathlib import Path
-import subprocess
 
-from django.apps import apps
-from django.db import transaction
-from django.urls import reverse
-from django.utils.encoding import force_text
-from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.appearance.classes import Icon
-from mayan.apps.documents.models.document_models import Document
-from mayan.apps.documents.models.document_file_models import DocumentFile
-from mayan.apps.documents.models.document_type_models import DocumentType
-from mayan.apps.common.serialization import yaml_load
-from mayan.apps.common.validators import YAMLValidator
 from mayan.apps.storage.models import SharedUploadedFile
-from mayan.apps.storage.utils import TemporaryFile
 
-from ..classes import (
-    PseudoFile, SourceBackend, SourceUploadedFile, StagingFile
-)
-from ..exceptions import SourceException
-from ..forms import (
-    #SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5
-    StagingUploadForm, WebFormUploadFormHTML5
-)
-from ..literals import (
-    DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-    SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_ASK
-)
-from ..settings import setting_scanimage_path
-from ..tasks import task_process_document_upload
+from ..classes import SourceBackend, SourceUploadedFile, StagingFile
+from ..forms import StagingUploadForm
+from ..literals import SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
 
-from .mixins import SourceBackendInteractiveMixin
+from .mixins import (
+    SourceBackendCompressedMixin, SourceBackendInteractiveMixin
+)
 
 logger = logging.getLogger(name=__name__)
 
@@ -59,25 +34,12 @@ logger = logging.getLogger(name=__name__)
 # - Move to folder
 
 
-class SourceBackendStagingFolder(SourceBackendInteractiveMixin, SourceBackend):
-    can_uncompress = True
+class SourceBackendStagingFolder(SourceBackendCompressedMixin, SourceBackendInteractiveMixin, SourceBackend):
     field_order = (
-        'uncompress', 'folder_path', 'preview_width', 'preview_height',
+        'folder_path', 'preview_width', 'preview_height',
         'delete_after_upload'
     )
     fields = {
-        'uncompress': {
-            'class': 'django.forms.ChoiceField',
-            'default': '',
-            'help_text': _(
-                'Whether to expand or not compressed archives.'
-            ),
-            'kwargs': {
-                'choices': SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-            },
-            'label': _('Uncompress'),
-            'required': True
-        },
         'folder_path': {
             'class': 'django.forms.CharField',
             'default': '',
@@ -122,16 +84,8 @@ class SourceBackendStagingFolder(SourceBackendInteractiveMixin, SourceBackend):
         }
     }
     icon_staging_folder_file = Icon(driver_name='fontawesome', symbol='file')
-    is_interactive = True
     label = _('Staging folder')
     upload_form_class = StagingUploadForm
-    widgets = {
-        'uncompress': {
-            'class': 'django.forms.widgets.Select', 'kwargs': {
-                'attrs': {'class': 'select2'},
-            }
-        }
-    }
 
     def get_file(self, *args, **kwargs):
         return StagingFile(staging_folder=self, *args, **kwargs)
@@ -166,15 +120,8 @@ class SourceBackendStagingFolder(SourceBackendInteractiveMixin, SourceBackend):
         )
 
     def get_view_context(self, context, request):
-        #staging_filelist = []
-
-        #try:
         staging_filelist = list(self.get_files())
 
-        #except Exception:# as exception:
-        #    raise
-        #    messages.error(message=exception, request=request)
-        #finally:
         subtemplates_list = [
             {
                 'name': 'appearance/generic_multiform_subtemplate.html',

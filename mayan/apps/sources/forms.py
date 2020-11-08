@@ -39,19 +39,9 @@ class NewDocumentFileForm(forms.Form):
 
 class UploadBaseForm(forms.Form):
     def __init__(self, *args, **kwargs):
-        show_expand = kwargs.pop('show_expand', False)
         self.source = kwargs.pop('source')
 
         super().__init__(*args, **kwargs)
-
-        if show_expand:
-            self.fields['expand'] = forms.BooleanField(
-                label=_('Expand compressed files'), required=False,
-                help_text=ugettext(
-                    'Upload a compressed file\'s contained files as '
-                    'individual documents.'
-                )
-            )
 
 
 class StagingUploadForm(UploadBaseForm):
@@ -99,7 +89,7 @@ class SourceBackendDynamicForm(DynamicModelForm):
         if self.instance.backend_data:
             backend_data = json.loads(s=self.instance.backend_data)
             for key in self.instance.get_backend().fields:
-                self.fields[key].initial = backend_data.get(key)
+                self.fields[key].initial = backend_data.get(key, None)
 
             #for key, value in json.loads(s=self.instance.backend_data).items():
             #    self.fields[key].initial = value

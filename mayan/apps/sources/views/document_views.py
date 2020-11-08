@@ -98,13 +98,13 @@ class DocumentUploadInteractiveView(ExternalObjectMixin, UploadBaseView):
         }
 
     def get_form_extra_kwargs__source_form(self):
-        show_expand = self.source.get_backend_instance().kwargs.get(
-            'uncompress'
-        ) == SOURCE_UNCOMPRESS_CHOICE_ASK
+        #show_expand = self.source.get_backend_instance().kwargs.get(
+        #    'uncompress'
+        #) == SOURCE_UNCOMPRESS_CHOICE_ASK
 
         return {
             'source': self.source,
-            'show_expand': show_expand,
+            #'show_expand': show_expand,
         }
 
     def get_pk_url_kwargs(self):
