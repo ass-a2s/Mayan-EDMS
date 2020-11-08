@@ -69,3 +69,4 @@
 - Rename DeletedDocument to TrashedDocument, same with the corresponding
   trashed fields and manager methods.
 - Add document file download event.
+- Update Dropzone from version 5.4.0 to 5.7.2.
