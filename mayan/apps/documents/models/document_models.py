@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 import uuid
 
 from django.apps import apps
@@ -12,6 +13,8 @@ from mayan.apps.common.mixins import ModelInstanceExtraDataAPIViewMixin
 from mayan.apps.common.signals import signal_mayan_pre_save
 from mayan.apps.events.classes import EventManagerSave
 from mayan.apps.events.decorators import method_event
+from mayan.apps.storage.compressed_files import Archive
+from mayan.apps.storage.exceptions import NoMIMETypeMatch
 
 from ..events import (
     event_document_create, event_document_properties_edit,
@@ -168,7 +171,8 @@ class Document(
         return self.files.order_by('timestamp').last()
 
     def file_new(
-        self, file_object, action=None, comment=None, filename=None, _user=None
+        self, file_object, action=None, comment=None, filename=None,
+        expand=False, _user=None
     ):
         logger.info('Creating new document file for document: %s', self)
 
@@ -181,6 +185,32 @@ class Document(
         DocumentFile = apps.get_model(
             app_label='documents', model_name='DocumentFile'
         )
+
+        if expand:
+            try:
+                compressed_file = Archive.open(file_object=file_object)
+                for compressed_file_member in compressed_file.members():
+                    with compressed_file.open_member(filename=compressed_file_member) as compressed_file_member_file_object:
+                        # Recursive call to expand nested compressed files
+                        # expand=True literal for recursive nested files.
+                        # Might cause problem with office files inside a
+                        # compressed file.
+                        self.file_new(
+                            action=action,
+                            comment=comment,
+                            expand=False,
+                            file_object=compressed_file_member_file_object,
+                            filename=Path(compressed_file_member).name,
+                            _user=_user
+                        )
+
+                # Avoid executing the expand=False code path.
+                return
+            except NoMIMETypeMatch:
+                logger.debug(msg='No expanding; Exception: NoMIMETypeMatch')
+                # Fallthrough to same code path as expand=False to avoid
+                # duplicating code.
+
         #transaction.atomic
         try:
             document_file = DocumentFile(

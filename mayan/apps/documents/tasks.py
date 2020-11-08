@@ -151,7 +151,7 @@ def task_document_file_page_image_generate(
 )
 def task_document_file_upload(
     self, document_id, shared_uploaded_file_id, user_id, action=None,
-    comment=None, filename=None
+    comment=None, expand=False, filename=None
 ):
     Document = apps.get_model(
         app_label='documents', model_name='Document'
@@ -163,7 +163,7 @@ def task_document_file_upload(
 
     try:
         document = Document.objects.get(pk=document_id)
-        shared_file = SharedUploadedFile.objects.get(
+        shared_uploaded_file = SharedUploadedFile.objects.get(
             pk=shared_uploaded_file_id
         )
         if user_id:
@@ -178,11 +178,13 @@ def task_document_file_upload(
         )
         raise self.retry(exc=exception)
 
-    with shared_file.open() as file_object:
+    with shared_uploaded_file.open() as file_object:
         try:
             document.file_new(
-                action=action, comment=comment, file_object=file_object,
-                filename=filename or shared_file.filename, _user=user
+                action=action, comment=comment, expand=expand,
+                file_object=file_object,
+                filename=filename or shared_uploaded_file.filename,
+                _user=user
             )
         except Warning as warning:
             # New document file are blocked
@@ -190,7 +192,7 @@ def task_document_file_upload(
                 'Warning during attempt to create new document file for '
                 'document: %s; %s', document, warning
             )
-            shared_file.delete()
+            shared_uploaded_file.delete()
         except OperationalError as exception:
             logger.warning(
                 'Operational error during attempt to create new document '
@@ -204,19 +206,19 @@ def task_document_file_upload(
                 'file for document: %s; %s', document, exception
             )
             try:
-                shared_file.delete()
+                shared_uploaded_file.delete()
             except OperationalError as exception:
                 logger.warning(
                     'Operational error during attempt to delete shared '
-                    'file: %s; %s.', shared_file, exception
+                    'file: %s; %s.', shared_uploaded_file, exception
                 )
         else:
             try:
-                shared_file.delete()
+                shared_uploaded_file.delete()
             except OperationalError as exception:
                 logger.warning(
                     'Operational error during attempt to delete shared '
-                    'file: %s; %s.', shared_file, exception
+                    'file: %s; %s.', shared_uploaded_file, exception
                 )
 
 
