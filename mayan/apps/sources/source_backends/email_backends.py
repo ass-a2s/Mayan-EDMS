@@ -22,9 +22,7 @@ from mayan.apps.common.validators import YAMLValidator
 from mayan.apps.storage.models import SharedUploadedFile
 from mayan.apps.storage.utils import TemporaryFile
 
-from ..classes import (
-    PseudoFile, SourceBackend, SourceUploadedFile, StagingFile
-)
+from ..classes import SourceBackend
 from ..exceptions import SourceException
 from ..forms import (
     #SaneScannerUploadForm, StagingUploadForm, WebFormUploadFormHTML5

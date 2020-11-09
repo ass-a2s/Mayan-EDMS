@@ -30,7 +30,7 @@ from .handlers import (
     handler_initialize_periodic_tasks
 )
 from .links import (
-    link_document_create_multiple, link_source_check,
+    link_document_create_multiple, link_source_test,
     link_source_backend_selection, link_source_delete, link_source_edit,
     link_source_list, link_staging_file_delete, link_document_file_upload
 )
@@ -134,7 +134,7 @@ class SourcesApp(MayanAppConfig):
             links=(link_staging_file_delete,), sources=(StagingFile,)
         )
         menu_object.bind_links(
-            links=(link_source_check,),
+            links=(link_source_test,),
             sources=(Source,)
         )
         menu_related.bind_links(

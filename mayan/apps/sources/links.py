@@ -10,7 +10,7 @@ from mayan.apps.navigation.classes import Link
 
 from .icons import (
     icon_document_create_multiple, icon_document_file_upload,
-    icon_source_backend_selection, icon_source_check_now,
+    icon_source_backend_selection, icon_source_test,
     icon_source_delete, icon_source_edit, icon_source_list,
     icon_staging_file_delete
 )
@@ -94,13 +94,6 @@ link_source_backend_selection = Link(
     text=_('Create source'),
     view='sources:source_backend_selection'
 )
-link_source_check = Link(
-    args=('resolved_object.pk',),
-    condition=condition_source_is_not_interactive,
-    icon_class=icon_source_check_now,
-    permissions=(permission_sources_view,), text=_('Check now'),
-    view='sources:source_check',
-)
 link_source_delete = Link(
     args=('resolved_object.pk',), icon_class=icon_source_delete,
     permissions=(permission_sources_delete,), tags='dangerous',
@@ -116,11 +109,13 @@ link_source_list = Link(
     permissions=(permission_sources_view,), text=_('Sources'),
     view='sources:source_list'
 )
-#link_source_list = Link(
-#    icon_class=icon_source_list,
-#    permissions=(permission_sources_view,), text=_('Document sources'),
-#    view='sources:setup_web_form_list'
-#)
+link_source_test = Link(
+    args=('resolved_object.pk',),
+    condition=condition_source_is_not_interactive,
+    icon_class=icon_source_test,
+    permissions=(permission_sources_view,), text=_('Test'),
+    view='sources:source_test',
+)
 
 link_staging_file_delete = Link(
     args=('source.pk', 'object.encoded_filename',), keep_query=True,

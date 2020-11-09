@@ -8,7 +8,7 @@ from .api_views import (
 from .views.document_file_views import DocumentFileUploadInteractiveView
 from .views.document_views import DocumentUploadInteractiveView
 from .views.source_views import (
-    SourceBackendSelectionView, SourceCheckView, SourceCreateView,
+    SourceBackendSelectionView, SourceTestView, SourceCreateView,
     SourceDeleteView, SourceEditView, SourceListView, StagingFileDeleteView
 )
 from .wizards import DocumentCreateWizard
@@ -64,16 +64,16 @@ urlpatterns = [
         name='source_create', view=SourceCreateView.as_view()
     ),
     url(
-        regex=r'^sources/(?P<source_id>\d+)/check/$',
-        name='source_check', view=SourceCheckView.as_view()
-    ),
-    url(
         regex=r'^sources/(?P<source_id>\d+)/delete/$',
         name='source_delete', view=SourceDeleteView.as_view()
     ),
     url(
         regex=r'^sources/(?P<source_id>\d+)/edit/$', name='source_edit',
         view=SourceEditView.as_view()
+    ),
+    url(
+        regex=r'^sources/(?P<source_id>\d+)/test/$',
+        name='source_test', view=SourceTestView.as_view()
     )
 ]
 

@@ -19,7 +19,7 @@ from mayan.apps.storage.models import SharedUploadedFile
 
 ## Remove DEFAULT_INTERVAL import
 from ..classes import SourceBackendNull
-from ..literals import DEFAULT_INTERVAL, SOURCE_UNCOMPRESS_CHOICES
+from ..literals import DEFAULT_INTERVAL
 from ..managers import SourceManager
 from ..wizards import WizardStep
 
@@ -184,11 +184,11 @@ class IntervalBaseModel(OutOfProcessSource):
         ), on_delete=models.CASCADE, to=DocumentType,
         related_name='interval_sources', verbose_name=_('Document type')
     )
-    uncompress = models.CharField(
-        choices=SOURCE_UNCOMPRESS_CHOICES,
-        help_text=_('Whether to expand or not, compressed archives.'),
-        max_length=1, verbose_name=_('Uncompress')
-    )
+    #uncompress = models.CharField(
+    #    choices=SOURCE_UNCOMPRESS_CHOICES,
+    #    help_text=_('Whether to expand or not, compressed archives.'),
+    #    max_length=1, verbose_name=_('Uncompress')
+    #)
 
     objects = models.Manager()
 

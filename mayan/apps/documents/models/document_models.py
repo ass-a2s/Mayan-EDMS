@@ -200,6 +200,8 @@ class Document(
                             comment=comment,
                             expand=False,
                             file_object=compressed_file_member_file_object,
+                            # Don't use keyword arguments for Path to allow
+                            # partials.
                             filename=Path(compressed_file_member).name,
                             _user=_user
                         )

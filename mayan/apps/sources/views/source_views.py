@@ -23,10 +23,10 @@ from ..permissions import (
     permission_sources_edit, permission_sources_view,
     permission_staging_file_delete
 )
-from ..tasks import task_check_interval_source
+from ..tasks import task_source_process_document
 
 __all__ = (
-    'SourceBackendSelectionView', 'SourceCheckView', 'SourceCreateView',
+    'SourceBackendSelectionView', 'SourceTestView', 'SourceCreateView',
     'SourceDeleteView', 'SourceEditView', 'SourceListView',
     'StagingFileDeleteView'
 )
@@ -48,41 +48,6 @@ class SourceBackendSelectionView(FormView):
                     'backend_path': backend
                 }
             )
-        )
-
-
-class SourceCheckView(ExternalObjectMixin, ConfirmView):
-    """
-    Trigger the task_check_interval_source task for a given source to
-    test/debug their configuration irrespective of the schedule task setup.
-    """
-    external_object_permission = permission_sources_edit
-    external_object_pk_url_kwarg = 'source_id'
-    external_object_class = Source
-
-    def get_extra_context(self):
-        return {
-            'object': self.external_object,
-            'subtitle': _(
-                'This will execute the source check code even if the source '
-                'is not enabled. Sources that delete content after '
-                'downloading will not do so while being tested. Check the '
-                'source\'s error log for information during testing. A '
-                'successful test will clear the error log.'
-            ), 'title': _(
-                'Trigger check for source "%s"?'
-            ) % self.external_object,
-        }
-
-    def view_action(self):
-        task_check_interval_source.apply_async(
-            kwargs={
-                'source_id': self.external_object.pk, 'test': True
-            }
-        )
-
-        messages.success(
-            message=_('Source check queued.'), request=self.request
         )
 
 
@@ -164,6 +129,41 @@ class SourceListView(SingleObjectListView):
             'no_results_title': _('No sources available'),
             'title': _('Sources'),
         }
+
+
+class SourceTestView(ExternalObjectMixin, ConfirmView):
+    """
+    Trigger the task_source_process_document task for a given source to
+    test/debug their configuration irrespective of the schedule task setup.
+    """
+    external_object_permission = permission_sources_edit
+    external_object_pk_url_kwarg = 'source_id'
+    external_object_class = Source
+
+    def get_extra_context(self):
+        return {
+            'object': self.external_object,
+            'subtitle': _(
+                'This will execute the source code even if the source '
+                'is not enabled. Sources that delete content after '
+                'downloading will not do so while being tested. Check the '
+                'source\'s error log for information during testing. A '
+                'successful test will clear the error log.'
+            ), 'title': _(
+                'Trigger check for source "%s"?'
+            ) % self.external_object,
+        }
+
+    def view_action(self):
+        task_source_process_document.apply_async(
+            kwargs={
+                'source_id': self.external_object.pk, 'dry_run': True
+            }
+        )
+
+        messages.success(
+            message=_('Source test queued.'), request=self.request
+        )
 
 
 class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):

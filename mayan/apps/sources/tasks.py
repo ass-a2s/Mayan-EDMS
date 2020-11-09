@@ -22,12 +22,12 @@ logger = logging.getLogger(name=__name__)
 
 
 @app.task(ignore_result=True)
-def task_check_interval_source(source_id, test=False):
+def task_source_process_document(source_id, dry_run=False):
     Source = apps.get_model(
         app_label='sources', model_name='Source'
     )
 
-    lock_id = 'task_check_interval_source-%d' % source_id
+    lock_id = 'task_source_process_document-%d' % source_id
     try:
         logger.debug('trying to acquire lock: %s', lock_id)
         lock = LockingBackend.get_instance().acquire_lock(
@@ -40,8 +40,8 @@ def task_check_interval_source(source_id, test=False):
 
         try:
             source = Source.objects.get(pk=source_id)
-            if source.enabled or test:
-                source.get_backend_instance().check_source(test=test)
+            if source.enabled or dry_run:
+                source.get_backend_instance().process_document(dry_run=dry_run)
         except Exception as exception:
             logger.error(
                 'Error processing source id: %s; %s', source_id, exception

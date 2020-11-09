@@ -1,40 +1,16 @@
 import errno
 import fcntl
-import json
 import logging
-import os
 from pathlib import Path
-import subprocess
 
-from django.apps import apps
-from django.db import transaction
-from django.urls import reverse
-from django.utils.encoding import force_text
-from django.utils.timezone import now
+from django.core.files import File
 from django.utils.translation import ugettext_lazy as _
 
-from mayan.apps.appearance.classes import Icon
-from mayan.apps.documents.models.document_models import Document
-from mayan.apps.documents.models.document_file_models import DocumentFile
-from mayan.apps.documents.models.document_type_models import DocumentType
-from mayan.apps.common.serialization import yaml_load
-from mayan.apps.common.validators import YAMLValidator
 from mayan.apps.storage.models import SharedUploadedFile
-from mayan.apps.storage.utils import TemporaryFile
 
-from ..classes import (
-    PseudoFile, SourceBackend, SourceUploadedFile, StagingFile
-)
+from ..classes import SourceBackend
 from ..exceptions import SourceException
-from ..forms import (
-    StagingUploadForm, WebFormUploadFormHTML5
-)
-from ..literals import (
-    DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-    SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_ASK
-)
-from ..settings import setting_scanimage_path
-from ..tasks import task_process_document_upload
+from ..literals import SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
 from .mixins import SourceBackendCompressedMixin, SourceBackendPeriodicMixin
 
@@ -44,23 +20,8 @@ logger = logging.getLogger(name=__name__)
 class SourceBackendWatchFolder(
     SourceBackendCompressedMixin, SourceBackendPeriodicMixin, SourceBackend
 ):
-    field_order = (
-        'interval', 'document_type_id', 'folder_path',
-        'include_subdirectories',
-    )
+    field_order = ('folder_path', 'include_subdirectories',)
     fields = {
-        'interval': {
-            'class': 'django.forms.IntegerField',
-            'default': DEFAULT_INTERVAL,
-            'help_text': _(
-                'Interval in seconds between checks for new documents.'
-            ),
-            'kwargs': {
-                'min_value': 0
-            },
-            'label': _('Interval'),
-            'required': True
-        },
         'folder_path': {
             'class': 'django.forms.CharField',
             'default': '',
@@ -83,24 +44,15 @@ class SourceBackendWatchFolder(
             'label': _('Include subdirectories?'),
             'required': False
         },
-        'document_type_id': {
-            'class': 'django.forms.ChoiceField',
-            'default': '',
-            'help_text': _(
-                'Assign a document type to documents uploaded from this '
-                'source.'
-            ),
-            'kwargs': {
-                'choices': [(document_type.id, document_type) for document_type in DocumentType.objects.all()],
-            },
-            'label': _('Document type'),
-            'required': True
-        }
     }
     label = _('Watch folder')
+    uncompress_choices = SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
-    def _check_source(self, test=False):
+    def get_shared_uploaded_file(self):
+        dry_run = self.process_kwargs['dry_run']
+
         path = Path(self.kwargs['folder_path'])
+
         # Force testing the path and raise errors for the log
         path.lstat()
         if not path.is_dir():
@@ -120,10 +72,10 @@ class SourceBackendWatchFolder(
                         if exception.errno != errno.EAGAIN:
                             raise
                     else:
-                        self.get_model_instance().handle_upload(
-                            file_object=file_object,
-                            expand=(self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ALWAYS),
-                            label=entry.name
+                        shared_uploaded_file = SharedUploadedFile.objects.create(
+                            file=File(file=file_object), filename=entry.name
                         )
-                        if not test:
+                        if not dry_run:
                             entry.unlink()
+
+                        return shared_uploaded_file

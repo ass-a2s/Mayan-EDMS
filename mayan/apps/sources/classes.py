@@ -26,22 +26,6 @@ from .literals import STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
 logger = logging.getLogger(name=__name__)
 
 
-class PseudoFile(File):
-    def __init__(self, file, name):
-        self.name = name
-        self.file = file
-        self.file.seek(0, os.SEEK_END)
-        self.size = self.file.tell()
-        self.file.seek(0)
-
-
-class SourceUploadedFile(File):
-    def __init__(self, source, file, extra_data=None):
-        self.file = file
-        self.source = source
-        self.extra_data = extra_data
-
-
 class SourceBackendMetaclass(type):
     _registry = {}
 

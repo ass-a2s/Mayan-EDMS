@@ -28,7 +28,7 @@ def handler_create_default_document_source(sender, **kwargs):
 
 def handler_delete_interval_source_periodic_task(sender, instance, **kwargs):
     for interval_source in instance.interval_sources.all():
-        interval_source._delete_periodic_task()
+        interval_source.delete_periodic_task()
 
 
 def handler_initialize_periodic_tasks(sender, **kwargs):

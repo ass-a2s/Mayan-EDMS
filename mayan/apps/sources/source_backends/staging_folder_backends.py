@@ -6,9 +6,8 @@ from django.utils.translation import ugettext_lazy as _
 from mayan.apps.appearance.classes import Icon
 from mayan.apps.storage.models import SharedUploadedFile
 
-from ..classes import SourceBackend, SourceUploadedFile, StagingFile
+from ..classes import SourceBackend, StagingFile
 from ..forms import StagingUploadForm
-from ..literals import SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
 
 from .mixins import (
     SourceBackendCompressedMixin, SourceBackendInteractiveMixin
@@ -17,24 +16,10 @@ from .mixins import (
 logger = logging.getLogger(name=__name__)
 
 
-#interactive
-#label, enabled, uncompress
-
-#periodic
-#label, enabled, uncompress, document type, interval
-
-
-# webforms - interactive
-
-# staging folders - interactive
-# folder path, preview width, preview height, delete after upload
-
-# ToDO: ACTION after upload
-# - Delete
-# - Move to folder
-
-
-class SourceBackendStagingFolder(SourceBackendCompressedMixin, SourceBackendInteractiveMixin, SourceBackend):
+class SourceBackendStagingFolder(
+    SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
+    SourceBackend
+):
     field_order = (
         'folder_path', 'preview_width', 'preview_height',
         'delete_after_upload'
@@ -87,6 +72,20 @@ class SourceBackendStagingFolder(SourceBackendCompressedMixin, SourceBackendInte
     label = _('Staging folder')
     upload_form_class = StagingUploadForm
 
+    #TODO: Implement post upload action
+    def clean_up_upload_file(self, upload_file_object):
+        if self.kwargs['delete_after_upload']:
+            try:
+                upload_file_object.extra_data.delete()
+            except Exception as exception:
+                logger.error(
+                    'Error deleting staging file: %s; %s',
+                    upload_file_object, exception
+                )
+                raise Exception(
+                    _('Error deleting staging file; %s') % exception
+                )
+
     def get_file(self, *args, **kwargs):
         return StagingFile(staging_folder=self, *args, **kwargs)
 
@@ -103,21 +102,11 @@ class SourceBackendStagingFolder(SourceBackendCompressedMixin, SourceBackendInte
                 _('Unable get list of staging files: %s') % exception
             )
 
-    def get_form_upload_file_object(self, form_data):
+    def get_shared_uploaded_file(self):
         staging_file = self.get_file(
-            encoded_filename=form_data['staging_file_id']
+            encoded_filename=self.process_kwargs['forms']['source_form'].cleaned_data['staging_file_id']
         )
-        return SourceUploadedFile(
-            source=self, file=staging_file.as_file(), extra_data=staging_file
-        )
-
-    def get_shared_uploaded_file(self, forms):
-        uploaded_file = self.get_form_upload_file_object(
-            form_data=forms['source_form'].cleaned_data
-        )
-        return SharedUploadedFile.objects.create(
-            file=uploaded_file.file
-        )
+        return SharedUploadedFile.objects.create(file=staging_file.as_file())
 
     def get_view_context(self, context, request):
         staging_filelist = list(self.get_files())
@@ -150,17 +139,3 @@ class SourceBackendStagingFolder(SourceBackendCompressedMixin, SourceBackendInte
         ]
 
         return {'subtemplates_list': subtemplates_list}
-
-    #def post_process_document_file(self):
-    def clean_up_upload_file(self, upload_file_object):
-        if self.kwargs['delete_after_upload']:
-            try:
-                upload_file_object.extra_data.delete()
-            except Exception as exception:
-                logger.error(
-                    'Error deleting staging file: %s; %s',
-                    upload_file_object, exception
-                )
-                raise Exception(
-                    _('Error deleting staging file; %s') % exception
-                )
