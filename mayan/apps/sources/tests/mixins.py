@@ -13,17 +13,41 @@ from ..literals import (
     SOURCE_UNCOMPRESS_CHOICE_NEVER, SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 )
 from ..models import Source
-#from ..models.staging_folder_sources import StagingFolderSource
-#from ..models.watch_folder_sources import WatchFolderSource
-#from ..models.webform_sources import WebFormSource
 
 from .literals import (
     TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_STAGING_PREVIEW_WIDTH
 )
 
-SOURCE_BACKEND_STAGING_FOLDER_PATH = 'mayan.apps.sources.sources.SourceBackendStagingFolder'
-SOURCE_BACKEND_WATCHFOLDER_PATH = 'mayan.apps.sources.sources.SourceBackendWatchFolder'
-SOURCE_BACKEND_WEB_FORM_PATH = 'mayan.apps.sources.sources.SourceBackendWebForm'
+SOURCE_BACKEND_IMAP_EMAIL_PATH = 'mayan.apps.sources.source_backends.email_backends.SourceBackendIMAPEmail'
+SOURCE_BACKEND_POP3_EMAIL_PATH = 'mayan.apps.sources.source_backends.email_backends.SourceBackendPOP3Email'
+SOURCE_BACKEND_STAGING_FOLDER_PATH = 'mayan.apps.sources.source_backends.staging_folder_backends.SourceBackendStagingFolder'
+SOURCE_BACKEND_WATCHFOLDER_PATH = 'mayan.apps.sources.source_backends.watch_folder_backends.SourceBackendWatchFolder'
+SOURCE_BACKEND_WEB_FORM_PATH = 'mayan.apps.sources.source_backends.web_form_backends.SourceBackendWebForm'
+
+
+class DocumentFileUploadViewTestMixin:
+    def _request_document_file_upload_view(self):
+        with open(file=TEST_SMALL_DOCUMENT_PATH, mode='rb') as file_object:
+            return self.post(
+                viewname='sources:document_file_upload', kwargs={
+                    'document_id': self.test_document.pk,
+                    'source_id': self.test_source.pk,
+                }, data={
+                    'document-action': DOCUMENT_FILE_ACTION_PAGES_NEW,
+                    'source-file': file_object
+                }
+            )
+
+    def _request_document_file_upload_no_source_view(self):
+        with open(file=TEST_SMALL_DOCUMENT_PATH, mode='rb') as file_object:
+            return self.post(
+                viewname='sources:document_file_upload', kwargs={
+                    'document_id': self.test_document.pk,
+                }, data={
+                    'document-action': DOCUMENT_FILE_ACTION_PAGES_NEW,
+                    'source-file': file_object
+                }
+            )
 
 
 class DocumentUploadIssueTestMixin:
@@ -67,31 +91,6 @@ class DocumentUploadWizardViewTestMixin:
                 'document_type_id': self.test_document_type.pk,
             }
         )
-
-
-class DocumentFileUploadViewTestMixin:
-    def _request_document_file_upload_view(self):
-        with open(file=TEST_SMALL_DOCUMENT_PATH, mode='rb') as file_object:
-            return self.post(
-                viewname='sources:document_file_upload', kwargs={
-                    'document_id': self.test_document.pk,
-                    'source_id': self.test_source.pk,
-                }, data={
-                    'document-action': DOCUMENT_FILE_ACTION_PAGES_NEW,
-                    'source-file': file_object
-                }
-            )
-
-    def _request_document_file_upload_no_source_view(self):
-        with open(file=TEST_SMALL_DOCUMENT_PATH, mode='rb') as file_object:
-            return self.post(
-                viewname='sources:document_file_upload', kwargs={
-                    'document_id': self.test_document.pk,
-                }, data={
-                    'document-action': DOCUMENT_FILE_ACTION_PAGES_NEW,
-                    'source-file': file_object
-                }
-            )
 
 
 class StagingFolderAPIViewTestMixin:

@@ -10,15 +10,17 @@ from ..classes import SourceBackend, StagingFile
 from ..forms import StagingUploadForm
 
 from .mixins import (
-    SourceBackendCompressedMixin, SourceBackendInteractiveMixin
+    SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
+    SourceBaseMixin
 )
 
+__all__ = ('SourceBackendStagingFolder',)
 logger = logging.getLogger(name=__name__)
 
 
 class SourceBackendStagingFolder(
     SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
-    SourceBackend
+    SourceBaseMixin, SourceBackend
 ):
     field_order = (
         'folder_path', 'preview_width', 'preview_height',

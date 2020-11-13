@@ -13,12 +13,15 @@ from mayan.apps.storage.utils import NamedTemporaryFile
 from ..classes import SourceBackend
 from ..settings import setting_scanimage_path
 
-from .mixins import SourceBackendInteractiveMixin
+from .mixins import SourceBackendInteractiveMixin, SourceBaseMixin
 
+__all__ = ('SourceBackendSANEScanner',)
 logger = logging.getLogger(name=__name__)
 
 
-class SourceBackendSANEScanner(SourceBackendInteractiveMixin, SourceBackend):
+class SourceBackendSANEScanner(
+    SourceBackendInteractiveMixin, SourceBaseMixin, SourceBackend
+):
     field_order = ('device_name', 'arguments')
     fields = {
         'device_name': {

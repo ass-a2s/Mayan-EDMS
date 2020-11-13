@@ -18,12 +18,13 @@ from mayan.apps.storage.exceptions import NoMIMETypeMatch
 from mayan.apps.storage.models import SharedUploadedFile
 
 ## Remove DEFAULT_INTERVAL import
+DEFAULT_INTERVAL = 200
 from ..classes import SourceBackendNull
-from ..literals import DEFAULT_INTERVAL
 from ..managers import SourceManager
 from ..wizards import WizardStep
 
 logger = logging.getLogger(name=__name__)
+
 
 
 #TODO: move this to ../models.py

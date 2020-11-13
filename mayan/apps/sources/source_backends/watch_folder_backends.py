@@ -12,13 +12,17 @@ from ..classes import SourceBackend
 from ..exceptions import SourceException
 from ..literals import SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
-from .mixins import SourceBackendCompressedMixin, SourceBackendPeriodicMixin
+from .mixins import (
+    SourceBackendCompressedMixin, SourceBackendPeriodicMixin, SourceBaseMixin
+)
 
+__all__ = ('SourceBackendWatchFolder',)
 logger = logging.getLogger(name=__name__)
 
 
 class SourceBackendWatchFolder(
-    SourceBackendCompressedMixin, SourceBackendPeriodicMixin, SourceBackend
+    SourceBackendCompressedMixin, SourceBackendPeriodicMixin,
+    SourceBaseMixin, SourceBackend
 ):
     field_order = ('folder_path', 'include_subdirectories',)
     fields = {
@@ -49,7 +53,7 @@ class SourceBackendWatchFolder(
     uncompress_choices = SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
     def get_shared_uploaded_file(self):
-        dry_run = self.process_kwargs['dry_run']
+        dry_run = self.process_kwargs.get('dry_run', False)
 
         path = Path(self.kwargs['folder_path'])
 

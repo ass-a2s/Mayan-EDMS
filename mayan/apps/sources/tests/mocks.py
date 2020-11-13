@@ -281,6 +281,13 @@ class MockPOP3Mailbox:
         return (None, self.messages[which], None)
 
 
+class MockRequest:
+    def __init__(self, user):
+        self.user = user
+        self.GET = {}
+        self.POST = {}
+
+
 class MockStagingFolder:
     """Mock of a StagingFolder model"""
     pk = 1

@@ -38,6 +38,7 @@ class EmailBaseModel(IntervalBaseModel):
     Mayan POP3 or IMAP source. Mayan will periodically download the emails
     and process them as Mayan documents.
     """
+    """
     host = models.CharField(max_length=128, verbose_name=_('Host'))
     ssl = models.BooleanField(default=True, verbose_name=_('SSL'))
     port = models.PositiveIntegerField(blank=True, null=True, help_text=_(
@@ -75,8 +76,8 @@ class EmailBaseModel(IntervalBaseModel):
             'Store the body of the email as a text document.'
         ), verbose_name=_('Store email body')
     )
-
-    objects = models.Manager()
+    """
+    #objects = models.Manager()
 
     class Meta:
         verbose_name = _('Email source')

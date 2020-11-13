@@ -9,15 +9,17 @@ from ..classes import SourceBackend
 from ..forms import WebFormUploadFormHTML5
 
 from .mixins import (
-    SourceBackendCompressedMixin, SourceBackendInteractiveMixin
+    SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
+    SourceBaseMixin
 )
 
+__all__ = ('SourceBackendWebForm',)
 logger = logging.getLogger(name=__name__)
 
 
 class SourceBackendWebForm(
     SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
-    SourceBackend
+    SourceBaseMixin, SourceBackend
 ):
     label = _('Web form')
     upload_form_class = WebFormUploadFormHTML5

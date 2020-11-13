@@ -94,12 +94,12 @@ class DocumentUploadInteractiveView(ExternalObjectMixin, UploadBaseView):
 
     def get_form_extra_kwargs__document_form(self):
         return {
-            'document_type': self.external_object,
+            'document_type': self.external_object
         }
 
     def get_form_extra_kwargs__source_form(self):
         return {
-            'source': self.source,
+            'source': self.source
         }
 
     def get_pk_url_kwargs(self):

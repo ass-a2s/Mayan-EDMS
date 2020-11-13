@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 
@@ -11,13 +12,16 @@ from mayan.apps.documents.models.document_models import Document
 from mayan.apps.documents.models.document_file_models import DocumentFile
 from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.documents.tasks import task_document_file_upload
+from mayan.apps.metadata.models import MetadataType
 
 from ..literals import (
-    DEFAULT_INTERVAL, SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES,
-    SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_ASK
+    SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES, SOURCE_UNCOMPRESS_CHOICE_ALWAYS,
+    SOURCE_UNCOMPRESS_CHOICE_ASK
 )
 
 from ..tasks import task_process_document_upload
+
+from .literals import DEFAULT_INTERVAL, DEFAULT_METADATA_ATTACHMENT_NAME
 
 logger = logging.getLogger(name=__name__)
 
@@ -91,6 +95,9 @@ class SourceBaseMixin:
 
         self.shared_uploaded_file = self.get_shared_uploaded_file()
 
+        if not self.shared_uploaded_file:
+            return
+
         document_type = self.get_document_type()
         user = self.get_user()
 
@@ -136,7 +143,7 @@ class SourceBaseMixin:
         task_process_document_upload.apply_async(kwargs=kwargs)
 
 
-class SourceBackendPeriodicMixin(SourceBaseMixin):
+class SourceBackendPeriodicMixin:
     @classmethod
     def get_setup_form_schema(cls):
         result = super().get_setup_form_schema()
@@ -172,6 +179,16 @@ class SourceBackendPeriodicMixin(SourceBaseMixin):
             }
         )
         result['field_order'] = ('document_type_id', 'interval',) + result['field_order']
+
+        result['widgets'].update(
+            {
+                'document_type_id': {
+                    'class': 'django.forms.widgets.Select', 'kwargs': {
+                        'attrs': {'class': 'select2'},
+                    }
+                }
+            }
+        )
 
         return result
 
@@ -236,7 +253,7 @@ class SourceBackendPeriodicMixin(SourceBaseMixin):
             )
 
 
-class SourceBackendInteractiveMixin(SourceBaseMixin):
+class SourceBackendInteractiveMixin:
     is_interactive = True
 
     def get_document(self):
@@ -335,3 +352,140 @@ class SourceBackendCompressedMixin:
 
     def get_task_extra_kwargs(self):
         return {'expand': self.get_expand()}
+
+
+
+####
+class SourceBackendEmailMixin:
+    @classmethod
+    def get_setup_form_schema(cls):
+        result = super().get_setup_form_schema()
+
+        result['fields'].update(
+            {
+                'host': {
+                    'class': 'django.forms.CharField',
+                    'label': _('Host'),
+                    'kwargs': {
+                        'max_length': 128
+                    },
+                    'required': True
+                },
+                'ssl': {
+                    'class': 'django.forms.BooleanField',
+                    'default': True,
+                    'label': _('SSL')
+                },
+                'port': {
+                    'class': 'django.forms.IntegerField',
+                    'help_text': _(
+                        'Typical choices are 110 for POP3, 995 for POP3 '
+                        'over SSL, 143 for IMAP, 993 for IMAP over SSL.'
+                    ),
+                    'kwargs': {
+                        'min_value': 0
+                    },
+                    'label': _('Port'),
+                    'required': True
+                },
+                'username': {
+                    'class': 'django.forms.CharField',
+                    'kargs': {
+                        'max_length': 128,
+                    },
+                    'label': _('Username'),
+                },
+                'password': {
+                    'class': 'django.forms.CharField',
+                    'kargs': {
+                        'max_length': 128,
+                    },
+                    'label': _('Password'),
+                },
+                'metadata_attachment_name': {
+                    'class': 'django.forms.CharField',
+                    'default': DEFAULT_METADATA_ATTACHMENT_NAME,
+                    'help_text': _(
+                        'Name of the attachment that will contains the metadata type '
+                        'names and value pairs to be assigned to the rest of the '
+                        'downloaded attachments.'
+                    ),
+                    'kargs': {
+                        'max_length': 128,
+                    },
+                    'label': _('Metadata attachment name'),
+                },
+                'from_metadata_type_id': {
+                    'blank': True,
+                    'class': 'django.forms.ChoiceField',
+                    'help_text': _(
+                        'Select a metadata type to store the email\'s '
+                        '"from" value. Must be a valid metadata type for '
+                        'the document type selected previously.'
+                    ),
+                    'kwargs': {
+                        'choices': itertools.chain(
+                            [(None, '---------')],
+                            [(instance.id, instance) for instance in MetadataType.objects.all()],
+                        )
+                    },
+                    'label': _('From metadata type'),
+                    'null': True,
+                    'required': False
+                },
+                'subject_metadata_type_id': {
+                    'blank': True,
+                    'class': 'django.forms.ChoiceField',
+                    'help_text': _(
+                        'Select a metadata type to store the email\'s '
+                        'subject value. Must be a valid metadata type for '
+                        'the document type selected previously.'
+                    ),
+                    'kwargs': {
+                        'choices': itertools.chain(
+                            [(None, '---------')],
+                            [(instance.id, instance) for instance in MetadataType.objects.all()],
+                        )
+                    },
+                    'label': _('Subject metadata type'),
+                    'null': True,
+                    'required': False
+                },
+                'store_body': {
+                    'class': 'django.forms.BooleanField',
+                    'default': True,
+                    'help_text': _(
+                        'Store the body of the email as a text document.'
+                    ),
+                    'label': _('Store email body'),
+                    'required': False
+                }
+            }
+        )
+        result['field_order'] = result['field_order'] + (
+            'host', 'ssl', 'port', 'username', 'password',
+            'metadata_attachment_name', 'from_metadata_type_id',
+            'subject_metadata_type_id', 'store_body'
+        )
+
+        result['widgets'].update(
+            {
+                'password': {
+                    'class': 'django.forms.widgets.PasswordInput', 'kwargs': {
+                        'render_value': True
+                    }
+                },
+                'from_metadata_type_id': {
+                    'class': 'django.forms.widgets.Select', 'kwargs': {
+                        'attrs': {'class': 'select2'},
+                    }
+                },
+                'subject_metadata_type_id': {
+                    'class': 'django.forms.widgets.Select', 'kwargs': {
+                        'attrs': {'class': 'select2'},
+                    }
+                }
+            }
+        )
+
+        return result
