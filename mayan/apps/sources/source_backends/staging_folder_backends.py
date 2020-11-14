@@ -104,11 +104,13 @@ class SourceBackendStagingFolder(
                 _('Unable get list of staging files: %s') % exception
             )
 
-    def get_shared_uploaded_file(self):
+    def get_shared_uploaded_files(self):
         staging_file = self.get_file(
             encoded_filename=self.process_kwargs['forms']['source_form'].cleaned_data['staging_file_id']
         )
-        return SharedUploadedFile.objects.create(file=staging_file.as_file())
+        return (
+            SharedUploadedFile.objects.create(file=staging_file.as_file()),
+        )
 
     def get_view_context(self, context, request):
         staging_filelist = list(self.get_files())

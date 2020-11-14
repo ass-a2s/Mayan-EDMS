@@ -186,6 +186,14 @@ class Document(
             app_label='documents', model_name='DocumentFile'
         )
 
+        #DocumentFile.execute_pre_create_hooks(
+        #    kwargs={
+        #        'document': self,
+        #        'file_object': file_object,
+        #        'user': _user
+        #    }
+        #)
+
         if expand:
             try:
                 compressed_file = Archive.open(file_object=file_object)

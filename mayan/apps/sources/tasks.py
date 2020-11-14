@@ -73,8 +73,8 @@ def task_generate_staging_file_image(
 )
 def task_process_document_upload(
     self, document_type_id, shared_uploaded_file_id, source_id,
-    description=None, expand=False, label=None, language=None,
-    query_string=None, user_id=None
+    callback_kwargs=None, description=None, expand=False, label=None,
+    language=None, user_id=None
 ):
     try:
         DocumentType = apps.get_model(
@@ -97,7 +97,7 @@ def task_process_document_upload(
         if not label:
             label = shared_uploaded_file.filename
 
-        query_string = query_string or {}
+        #query_string = query_string or {}
 
         if user_id:
             user = get_user_model().objects.get(pk=user_id)
@@ -112,9 +112,11 @@ def task_process_document_upload(
     else:
         with shared_uploaded_file.open() as file_object:
             source.handle_file_object_upload(
-                document_type=document_type, description=description,
-                expand=expand, file_object=file_object, label=label,
-                language=language, query_string=query_string, user=user
+                callback_kwargs=callback_kwargs, document_type=document_type,
+                description=description, expand=expand,
+                file_object=file_object, label=label, language=language,
+                #query_string=query_string, user=user
+                user=user
             )
 
         shared_uploaded_file.delete()

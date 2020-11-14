@@ -52,7 +52,7 @@ class SourceBackendWatchFolder(
     label = _('Watch folder')
     uncompress_choices = SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
-    def get_shared_uploaded_file(self):
+    def get_shared_uploaded_files(self):
         dry_run = self.process_kwargs.get('dry_run', False)
 
         path = Path(self.kwargs['folder_path'])
@@ -82,4 +82,4 @@ class SourceBackendWatchFolder(
                         if not dry_run:
                             entry.unlink()
 
-                        return shared_uploaded_file
+                        return (shared_uploaded_file,)

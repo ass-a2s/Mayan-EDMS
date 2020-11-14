@@ -56,7 +56,7 @@ class SourceBackendSANEScanner(
         }
     }
 
-    def get_shared_uploaded_file(self):
+    def get_shared_uploaded_files(self):
         command_scanimage = sh.Command(path=setting_scanimage_path.value)
 
         with NamedTemporaryFile() as file_object:
@@ -71,10 +71,12 @@ class SourceBackendSANEScanner(
 
             file_object.seek(0)
 
-            return SharedUploadedFile.objects.create(
-                file=File(file=file_object), filename='scan {}'.format(
-                    now()
-                )
+            return (
+                SharedUploadedFile.objects.create(
+                    file=File(file=file_object), filename='scan {}'.format(
+                        now()
+                    )
+                ),
             )
 
     def get_view_context(self, context, request):

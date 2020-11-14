@@ -38,7 +38,8 @@ def task_document_stubs_delete():
 def task_document_upload(
     document_type_id, shared_uploaded_file_id, callback_dotted_path=None,
     callback_function=None, callback_kwargs=None, description=None,
-    label=None, language=None, query_string=None, user_id=None
+    #label=None, language=None, query_string=None, user_id=None
+    label=None, language=None, user_id=None
 ):
     DocumentType = apps.get_model(
         app_label='documents', model_name='DocumentType'
@@ -85,7 +86,7 @@ def task_document_upload(
         callback_kwargs = callback_kwargs or {}
         function = getattr(callback, callback_function)
         function(
-            document_file=document_file, query_string=query_string, user=user,
+            document_file=document_file, #query_string=query_string, user=user,
             **callback_kwargs
         )
 

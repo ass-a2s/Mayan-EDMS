@@ -35,7 +35,7 @@ class DocumentUploadInteractiveView(ExternalObjectMixin, UploadBaseView):
         source_backend_instance = self.source.get_backend_instance()
 
         try:
-            source_backend_instance.process_document(
+            source_backend_instance.process_documents(
                 document_type=self.external_object, forms=forms,
                 request=self.request
             )

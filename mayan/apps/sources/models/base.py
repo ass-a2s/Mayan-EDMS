@@ -1,6 +1,7 @@
 import json
 import logging
 
+from django.contrib.auth import get_user_model
 from django.core.files import File
 from django.db import models, transaction
 from django.utils.encoding import force_text
@@ -11,7 +12,8 @@ from model_utils.managers import InheritanceManager
 
 from mayan.apps.common.mixins import BackendModelMixin
 from mayan.apps.converter.layers import layer_saved_transformations
-from mayan.apps.documents.models import DocumentType
+from mayan.apps.documents.models.document_models import Document
+from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.documents.tasks import task_document_upload
 from mayan.apps.storage.compressed_files import Archive
 from mayan.apps.storage.exceptions import NoMIMETypeMatch
@@ -46,21 +48,29 @@ class Source(BackendModelMixin, models.Model):
 
     @staticmethod
     def callback_post_task_document_upload(
-        document_file, query_string, source_id, user=None
+        #document_file, query_string, source_id, user=None
+        document_file, **kwargs
     ):
-        source = Source.objects.get(pk=source_id)
+        source = Source.objects.get(pk=kwargs['source_id'])
 
-        if user:
-            document_file.document.add_as_recent_document_for_user(user=user)
+        if kwargs['user_id']:
+            User = get_user_model()
+            try:
+                user = User.objects.get(pk=kwargs['user_id'])
+            except User.DoesNotExist:
+                """Skip adding recent document"""
+            else:
+                document_file.document.add_as_recent_document_for_user(
+                    user=user
+                )
 
         layer_saved_transformations.copy_transformations(
             source=source, targets=document_file.pages.all()
         )
-        WizardStep.post_upload_process(
-            document=document_file.document, query_string=query_string
-        )
 
-        #TODO: call source backend callback
+        source.get_backend_instance().callback(
+            document_file=document_file, **kwargs
+        )
 
     def __str__(self):
         return '%s' % self.label
@@ -75,8 +85,8 @@ class Source(BackendModelMixin, models.Model):
         return '{} {}'.format(self.get_backend_label(), self.label)
 
     def handle_file_object_upload(
-        self, document_type, file_object, description=None, expand=False,
-        label=None, language=None, query_string=None, user=None
+        self, document_type, file_object, callback_kwargs=None,
+        description=None, expand=False, label=None, language=None, user=None
     ):
         """
         Handle an upload request from a file object which may be an individual
@@ -92,8 +102,8 @@ class Source(BackendModelMixin, models.Model):
         #    'description': description, 'document_type': document_type,
         #    'label': label, 'language': language, 'user': user
         #}
-
-        query_string = query_string or {}
+        #query_string = query_string or {}
+        callback_kwargs = callback_kwargs or {}
 
         if expand:
             try:
@@ -105,13 +115,14 @@ class Source(BackendModelMixin, models.Model):
                         # Might cause problem with office files inside a
                         # compressed file.
                         self.handle_file_object_upload(
+                            callback_kwargs=callback_kwargs,
                             document_type=document_type,
                             description=description,
                             expand=False,
                             file_object=compressed_file_member_file_object,
                             label=force_text(s=compressed_file_member),
                             language=language,
-                            query_string=query_string,
+                            #query_string=query_string,
                             user=user
                         )
 
@@ -126,10 +137,33 @@ class Source(BackendModelMixin, models.Model):
             file=File(file_object)
         )
 
+        Document.execute_pre_create_hooks(
+            kwargs={
+                'document_type': document_type,
+                'user': user
+            }
+        )
+
+        #DocumentFile.execute_pre_create_hooks(
+        #    kwargs={
+        #        'document_type': document_type,
+        #        'shared_uploaded_file': shared_uploaded_file,
+        #        'user': user
+        #    }
+        #)
+
         if user:
             user_id = user.pk
         else:
             user_id = None
+
+        final_callback_kwargs = callback_kwargs.copy()
+        final_callback_kwargs.update(
+            {
+                'source_id': self.pk,
+                'user_id': user_id
+            }
+        )
 
         task_document_upload.apply_async(
             kwargs={
@@ -138,13 +172,11 @@ class Source(BackendModelMixin, models.Model):
                 'description': description,
                 'label': label,
                 'language': language,
-                'query_string': query_string,
+                #'query_string': query_string,
                 'user_id': user_id,
                 'callback_dotted_path': 'mayan.apps.sources.models.base.Source',
                 'callback_function': 'callback_post_task_document_upload',
-                'callback_kwargs': {
-                    'source_id': self.pk,
-                }
+                'callback_kwargs': final_callback_kwargs
             }
         )
 

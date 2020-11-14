@@ -46,7 +46,9 @@ class SourceBackendWebForm(
             ]
         }
 
-    def get_shared_uploaded_file(self):
-        return SharedUploadedFile.objects.create(
-            file=self.process_kwargs['forms']['source_form'].cleaned_data['file']
+    def get_shared_uploaded_files(self):
+        return (
+            SharedUploadedFile.objects.create(
+                file=self.process_kwargs['forms']['source_form'].cleaned_data['file']
+            ),
         )

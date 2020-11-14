@@ -41,7 +41,7 @@ class DocumentFileUploadInteractiveView(ExternalObjectMixin, UploadBaseView):
             DocumentFile.execute_pre_create_hooks(
                 kwargs={
                     'document': self.external_object,
-                    'shared_uploaded_file': None,
+                    'file_object': None,
                     'user': self.request.user
                 }
             )

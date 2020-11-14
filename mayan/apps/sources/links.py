@@ -56,7 +56,7 @@ def condition_document_new_files_allowed(context):
         DocumentFile.execute_pre_create_hooks(
             kwargs={
                 'document': context['object'],
-                'shared_uploaded_file': None,
+                'file_object': None,
                 'user': context.request.user
             }
         )

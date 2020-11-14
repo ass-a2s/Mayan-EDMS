@@ -79,7 +79,7 @@ class IMAPSourceBackendTestCase(
             ),
         }
 
-        source_backend_instance.process_document(
+        source_backend_instance.process_documents(
             document_type=self.test_document_type, forms=self.test_forms,
             request=self.get_test_request()
         )
@@ -114,7 +114,7 @@ class StagingFolderSourceBackendTestCase(
             ),
         }
 
-        source_backend_instance.process_document(
+        source_backend_instance.process_documents(
             document_type=self.test_document_type, forms=self.test_forms,
             request=self.get_test_request()
         )
@@ -147,7 +147,7 @@ class WatchFolderSourceBackendTestCase(
 
         shutil.copy(src=TEST_SMALL_DOCUMENT_PATH, dst=self.temporary_directory)
 
-        self.test_source.get_backend_instance().process_document()
+        self.test_source.get_backend_instance().process_documents()
 
         self.assertEqual(Document.objects.count(), document_count + 1)
         self.assertEqual(
@@ -168,7 +168,7 @@ class WatchFolderSourceBackendTestCase(
 
         document_count = Document.objects.count()
 
-        self.test_source.get_backend_instance().process_document()
+        self.test_source.get_backend_instance().process_documents()
         self.assertEqual(Document.objects.count(), document_count)
 
     def test_subfolder_enabled(self):
@@ -184,7 +184,7 @@ class WatchFolderSourceBackendTestCase(
 
         document_count = Document.objects.count()
 
-        self.test_source.get_backend_instance().process_document()
+        self.test_source.get_backend_instance().process_documents()
 
         self.assertEqual(Document.objects.count(), document_count + 1)
 
@@ -210,7 +210,7 @@ class WatchFolderSourceBackendTestCase(
 
         document_count = Document.objects.count()
 
-        self.test_source.get_backend_instance().process_document()
+        self.test_source.get_backend_instance().process_documents()
 
         self.assertEqual(Document.objects.count(), document_count + 1)
 
@@ -238,9 +238,9 @@ class WatchFolderSourceBackendTestCase(
 
         with path_test_file.open(mode='rb+') as file_object:
             fcntl.lockf(file_object, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self.test_source.get_backend_instance().process_document()
+            self.test_source.get_backend_instance().process_documents()
             process = Process(
-                target=self.test_source.get_backend_instance().process_document()
+                target=self.test_source.get_backend_instance().process_documents()
             )
             process.start()
             process.join()
@@ -264,7 +264,7 @@ class WebFormSourceBackendTestCase(
                 ),
             }
 
-            source_backend_instance.process_document(
+            source_backend_instance.process_documents(
                 document_type=self.test_document_type, forms=self.test_forms,
                 request=self.get_test_request()
             )
