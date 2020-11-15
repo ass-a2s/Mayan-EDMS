@@ -17,15 +17,17 @@ from ..models import Source
 from ..source_backends.literals import (
     DEFAULT_EMAIL_IMAP_MAILBOX, DEFAULT_EMAIL_IMAP_SEARCH_CRITERIA,
     DEFAULT_EMAIL_IMAP_STORE_COMMANDS, DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
-    DEFAULT_EMAIL_POP3_TIMEOUT
+    DEFAULT_EMAIL_POP3_TIMEOUT, DEFAULT_PERIOD_INTERVAL
 )
 
 from .literals import (
+    TEST_SOURCE_BACKEND_EMAIL_PATH, TEST_SOURCE_BACKEND_PERIODIC_PATH,
     TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_STAGING_PREVIEW_WIDTH
 )
+
 from .mocks import MockRequest
 
-#TODO: get patch from backend class
+#TODO: get path from backend class
 SOURCE_BACKEND_IMAP_EMAIL_PATH = 'mayan.apps.sources.source_backends.email_backends.SourceBackendIMAPEmail'
 SOURCE_BACKEND_POP3_EMAIL_PATH = 'mayan.apps.sources.source_backends.email_backends.SourceBackendPOP3Email'
 SOURCE_BACKEND_STAGING_FOLDER_PATH = 'mayan.apps.sources.source_backends.staging_folder_backends.SourceBackendStagingFolder'
@@ -58,7 +60,7 @@ class DocumentFileUploadViewTestMixin:
             )
 
 
-class DocumentUploadIssueTestMixin:
+class DocumentUploadIssueViewTestMixin:
     def _request_test_source_create_view(self):
         return self.post(
             viewname='sources:source_create', kwargs={
@@ -101,27 +103,6 @@ class DocumentUploadWizardViewTestMixin:
         )
 
 
-class SourceBackendTestMixin:
-    class MockSourceForm:
-        def __init__(self, **kwargs):
-            self.cleaned_data = kwargs
-
-    def setUp(self):
-        super().setUp()
-        self.test_document_form = self.get_test_document_form()
-
-    def get_test_document_form(self):
-        document_form = NewDocumentForm(
-            data={}, document_type=self.test_document_type
-        )
-        document_form.full_clean()
-
-        return document_form
-
-    def get_test_request(self):
-        return MockRequest(user=self._test_case_user)
-
-
 class SourceTestMixin:
     def _create_test_source(self, backend_path, backend_data=None):
         self.test_source = Source.objects.create(
@@ -131,12 +112,36 @@ class SourceTestMixin:
         )
 
 
+class EmailSourceBackendTestMixin(SourceTestMixin):
+    def _create_test_email_source_backend(self, extra_data=None):
+        backend_data = {
+            'document_type_id': self.test_document_type.pk,
+            'host': '',
+            'interval': DEFAULT_PERIOD_INTERVAL,
+            'metadata_attachment_name': DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
+            'password': '',
+            'port': '',
+            'ssl': True,
+            'store_body': False,
+            'username': ''
+        }
+
+        if extra_data:
+            backend_data.update(extra_data)
+
+        self._create_test_source(
+            backend_path=TEST_SOURCE_BACKEND_EMAIL_PATH,
+            backend_data=backend_data
+        )
+
+
 class IMAPEmailSourceTestMixin(SourceTestMixin):
     def _create_test_imap_email_source(self, extra_data=None):
         backend_data = {
             'document_type_id': self.test_document_type.pk,
             'execute_expunge': True,
             'host': '',
+            'interval': DEFAULT_PERIOD_INTERVAL,
             'mailbox': DEFAULT_EMAIL_IMAP_MAILBOX,
             'mailbox_destination': '',
             'metadata_attachment_name': DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
@@ -159,11 +164,48 @@ class IMAPEmailSourceTestMixin(SourceTestMixin):
         )
 
 
+class InteractiveSourceBackendTestMixin:
+    class MockSourceForm:
+        def __init__(self, **kwargs):
+            self.cleaned_data = kwargs
+
+    def setUp(self):
+        super().setUp()
+        self.test_document_form = self.get_test_document_form()
+
+    def get_test_document_form(self):
+        document_form = NewDocumentForm(
+            data={}, document_type=self.test_document_type
+        )
+        document_form.full_clean()
+
+        return document_form
+
+    def get_test_request(self):
+        return MockRequest(user=self._test_case_user)
+
+
+class PeriodicSourceBackendTestMixin(SourceTestMixin):
+    def _create_test_periodic_source_backend(self, extra_data=None):
+        backend_data = {
+            'interval': DEFAULT_PERIOD_INTERVAL
+        }
+
+        if extra_data:
+            backend_data.update(extra_data)
+
+        self._create_test_source(
+            backend_path=TEST_SOURCE_BACKEND_PERIODIC_PATH,
+            backend_data=backend_data
+        )
+
+
 class POP3EmailSourceTestMixin(SourceTestMixin):
     def _create_test_pop3_email_source(self, extra_data=None):
         backend_data = {
             'document_type_id': self.test_document_type.pk,
             'host': '',
+            'interval': DEFAULT_PERIOD_INTERVAL,
             'metadata_attachment_name': DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
             'password': '',
             'port': '',
@@ -386,6 +428,7 @@ class WatchFolderTestMixin(SourceTestMixin):
             'document_type_id': self.test_document_type.pk,
             'folder_path': self.temporary_directory,
             'include_subdirectories': False,
+            'interval': DEFAULT_PERIOD_INTERVAL,
             'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER
         }
 

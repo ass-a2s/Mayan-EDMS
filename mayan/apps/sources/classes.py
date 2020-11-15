@@ -101,6 +101,19 @@ class SourceBackend(
         self.model_instance_id = model_instance_id
         self.kwargs = kwargs
 
+    def create(self):
+        """
+        Called after the source model's .save() method for new
+        instances.
+        """
+        return
+
+    def delete(self):
+        """
+        Called before the source model's .delete() method.
+        """
+        return
+
     def get_model_instance(self):
         Source = apps.get_model(app_label='sources', model_name='Source')
         return Source.objects.get(pk=self.model_instance_id)
@@ -117,6 +130,13 @@ class SourceBackend(
                 'cls': self.__class__.__name__
             }
         )
+
+    def save(self):
+        """
+        Called after the source model's .save() method for existing
+        instances.
+        """
+        return
 
 
 class SourceBackendNull(SourceBackend):

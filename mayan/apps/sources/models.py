@@ -70,7 +70,7 @@ class Source(BackendModelMixin, models.Model):
 
     def delete(self, *args, **kwargs):
         with transaction.atomic():
-            #self.get_backend_instance().delete()
+            self.get_backend_instance().delete()
             super().delete(*args, **kwargs)
 
     def fullname(self):
@@ -158,6 +158,11 @@ class Source(BackendModelMixin, models.Model):
         #return documents
 
     def save(self, *args, **kwargs):
+        create = not self.pk
+
         with transaction.atomic():
-            #self.get_backend_instance().save()
             super().save(*args, **kwargs)
+            if create:
+                self.get_backend_instance().create()
+            else:
+                self.get_backend_instance().save()

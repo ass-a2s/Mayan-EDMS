@@ -21,7 +21,7 @@ from ..permissions import (
 
 from .literals import TEST_SOURCE_LABEL, TEST_SOURCE_UNCOMPRESS_N
 from .mixins import (
-    DocumentFileUploadViewTestMixin, DocumentUploadIssueTestMixin,
+    DocumentFileUploadViewTestMixin, DocumentUploadIssueViewTestMixin,
     DocumentUploadWizardViewTestMixin, StagingFolderTestMixin,
     StagingFolderViewTestMixin, WebFormSourceTestMixin, SourceViewTestMixin,
     WatchFolderTestMixin
@@ -129,7 +129,7 @@ class DocumentUploadWizardViewTestCase(
 
 
 class DocumentUploadIssueTestCase(
-    DocumentUploadIssueTestMixin, GenericDocumentViewTestCase
+    DocumentUploadIssueViewTestMixin, GenericDocumentViewTestCase
 ):
     auto_upload_test_document = False
     auto_login_superuser = True
