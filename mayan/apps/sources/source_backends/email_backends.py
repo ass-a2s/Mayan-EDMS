@@ -1,6 +1,8 @@
 import imaplib
 import logging
+import poplib
 
+from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
 from ..classes import SourceBackend
@@ -100,8 +102,8 @@ class SourceBackendIMAPEmail(
         dry_run = self.process_kwargs.get('dry_run', False)
 
         logger.debug(msg='Starting IMAP email fetch')
-        logger.debug('host: %s', self.host)
-        logger.debug('ssl: %s', self.ssl)
+        logger.debug('host: %s', self.kwargs['host'])
+        logger.debug('ssl: %s', self.kwargs['ssl'])
 
         if self.kwargs['ssl']:
             server = imaplib.IMAP4_SSL(
@@ -152,7 +154,7 @@ class SourceBackendIMAPEmail(
                     )
 
                 try:
-                    SourceBackendIMAPEmail.process_message(
+                    shared_uploaded_files = self.process_message(
                         source=self, message=data[0][1]
                     )
                 except Exception as exception:
@@ -196,6 +198,8 @@ class SourceBackendIMAPEmail(
         server.close()
         server.logout()
 
+        return shared_uploaded_files
+
 
 class SourceBackendPOP3Email(
     SourceBackendCompressedMixin, SourceBackendEmailMixin,
@@ -213,3 +217,47 @@ class SourceBackendPOP3Email(
         }
     }
     label = _('POP3 email')
+
+    def get_shared_uploaded_files(self):
+        dry_run = self.process_kwargs.get('dry_run', False)
+
+        logger.debug(msg='Starting POP3 email fetch')
+        logger.debug('host: %s', self.kwargs['host'])
+        logger.debug('ssl: %s', self.kwargs['ssl'])
+
+        if self.kwargs['ssl']:
+            server = poplib.POP3_SSL(host=self.kwargs['host'], port=self.kwargs['port'])
+        else:
+            server = poplib.POP3(
+                host=self.kwargs['host'], port=self.kwargs['port'], timeout=self.kwargs['timeout']
+            )
+
+        server.getwelcome()
+        server.user(self.kwargs['username'])
+        server.pass_(self.kwargs['password'])
+
+        messages_info = server.list()
+
+        logger.debug(msg='messages_info:')
+        logger.debug(msg=messages_info)
+        logger.debug('messages count: %s', len(messages_info[1]))
+
+        for message_info in messages_info[1]:
+            message_number, message_size = message_info.split()
+            message_number = int(message_number)
+
+            logger.debug('message_number: %s', message_number)
+            logger.debug('message_size: %s', message_size)
+
+            message_lines = server.retr(which=message_number)[1]
+            message_complete = force_text(s=b'\n'.join(message_lines))
+
+            shared_uploaded_files = self.process_message(
+                source=self, message=message_complete
+            )
+            if not dry_run:
+                server.dele(which=message_number)
+
+        server.quit()
+
+        return shared_uploaded_files

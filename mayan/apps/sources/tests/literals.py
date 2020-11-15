@@ -39,6 +39,7 @@ Content-Type: image/png; name="test-02.png"
 Content-Disposition: attachment; filename="test-02.png"
 Content-Transfer-Encoding: base64
 X-Attachment-Id: f_ia6yymei1'''
+TEST_EMAIL_BASE64_FILENAME_ATTACHMENT_FILENAME = 'Ampelmännchen.txt'
 TEST_EMAIL_BASE64_FILENAME = force_bytes('''From: noreply@example.com
 To: test@example.com
 Subject: Scan to E-mail Server Job

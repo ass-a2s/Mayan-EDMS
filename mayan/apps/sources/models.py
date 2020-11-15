@@ -19,17 +19,13 @@ from mayan.apps.storage.compressed_files import Archive
 from mayan.apps.storage.exceptions import NoMIMETypeMatch
 from mayan.apps.storage.models import SharedUploadedFile
 
-## Remove DEFAULT_INTERVAL import
-DEFAULT_INTERVAL = 200
-from ..classes import SourceBackendNull
-from ..managers import SourceManager
-from ..wizards import WizardStep
+from .classes import SourceBackendNull
+from .managers import SourceManager
+from .wizards import WizardStep
 
 logger = logging.getLogger(name=__name__)
 
 
-
-#TODO: move this to ../models.py
 class Source(BackendModelMixin, models.Model):
     _backend_model_null_backend = SourceBackendNull
 
@@ -47,10 +43,7 @@ class Source(BackendModelMixin, models.Model):
         verbose_name_plural = _('Sources')
 
     @staticmethod
-    def callback_post_task_document_upload(
-        #document_file, query_string, source_id, user=None
-        document_file, **kwargs
-    ):
+    def callback_post_task_document_upload(document_file, **kwargs):
         source = Source.objects.get(pk=kwargs['source_id'])
 
         if kwargs['user_id']:
@@ -81,7 +74,6 @@ class Source(BackendModelMixin, models.Model):
             super().delete(*args, **kwargs)
 
     def fullname(self):
-        #return ' '.join([self.class_fullname(), '"%s"' % self.label])
         return '{} {}'.format(self.get_backend_label(), self.label)
 
     def handle_file_object_upload(
@@ -93,16 +85,7 @@ class Source(BackendModelMixin, models.Model):
         document or a compressed file containing multiple documents.
         """
         #documents = []
-        #if not document_type:
-        #    document_type = DocumentType.objects.get(
-        #        pk=self.get_backend_data()['document_type_id']
-        #    )
 
-        #kwargs = {
-        #    'description': description, 'document_type': document_type,
-        #    'label': label, 'language': language, 'user': user
-        #}
-        #query_string = query_string or {}
         callback_kwargs = callback_kwargs or {}
 
         if expand:
@@ -122,7 +105,6 @@ class Source(BackendModelMixin, models.Model):
                             file_object=compressed_file_member_file_object,
                             label=force_text(s=compressed_file_member),
                             language=language,
-                            #query_string=query_string,
                             user=user
                         )
 
@@ -144,14 +126,6 @@ class Source(BackendModelMixin, models.Model):
             }
         )
 
-        #DocumentFile.execute_pre_create_hooks(
-        #    kwargs={
-        #        'document_type': document_type,
-        #        'shared_uploaded_file': shared_uploaded_file,
-        #        'user': user
-        #    }
-        #)
-
         if user:
             user_id = user.pk
         else:
@@ -172,18 +146,12 @@ class Source(BackendModelMixin, models.Model):
                 'description': description,
                 'label': label,
                 'language': language,
-                #'query_string': query_string,
                 'user_id': user_id,
-                'callback_dotted_path': 'mayan.apps.sources.models.base.Source',
+                'callback_dotted_path': 'mayan.apps.sources.models.Source',
                 'callback_function': 'callback_post_task_document_upload',
                 'callback_kwargs': final_callback_kwargs
             }
         )
-
-            #def task_document_upload(
-            #    document_type_id, shared_uploaded_file_id, description=None, label=None,
-            #    language=None, querystring=None, user=None, callback=None
-            #):
 
         # Return a list of newly created documents. Used by the email source
         # to assign the from and subject metadata values.
@@ -193,39 +161,3 @@ class Source(BackendModelMixin, models.Model):
         with transaction.atomic():
             #self.get_backend_instance().save()
             super().save(*args, **kwargs)
-
-
-class OutOfProcessSource(Source):
-    is_interactive = False
-
-    objects = models.Manager()
-
-    class Meta:
-        verbose_name = _('Out of process')
-        verbose_name_plural = _('Out of process')
-
-
-class IntervalBaseModel(OutOfProcessSource):
-    interval = models.PositiveIntegerField(
-        default=DEFAULT_INTERVAL,
-        help_text=_('Interval in seconds between checks for new documents.'),
-        verbose_name=_('Interval')
-    )
-    document_type = models.ForeignKey(
-        help_text=_(
-            'Assign a document type to documents uploaded from this source.'
-        ), on_delete=models.CASCADE, to=DocumentType,
-        related_name='interval_sources', verbose_name=_('Document type')
-    )
-    #uncompress = models.CharField(
-    #    choices=SOURCE_UNCOMPRESS_CHOICES,
-    #    help_text=_('Whether to expand or not, compressed archives.'),
-    #    max_length=1, verbose_name=_('Uncompress')
-    #)
-
-    objects = models.Manager()
-
-    class Meta:
-        verbose_name = _('Interval source')
-        verbose_name_plural = _('Interval sources')
-

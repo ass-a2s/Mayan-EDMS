@@ -28,75 +28,70 @@ from ..models import Source
 
 from .literals import (
     TEST_EMAIL_ATTACHMENT_AND_INLINE, TEST_EMAIL_BASE64_FILENAME,
-    TEST_EMAIL_BASE64_FILENAME_FROM, TEST_EMAIL_BASE64_FILENAME_SUBJECT,
-    TEST_EMAIL_INLINE_IMAGE, TEST_EMAIL_NO_CONTENT_TYPE,
-    TEST_EMAIL_NO_CONTENT_TYPE_STRING, TEST_EMAIL_ZERO_LENGTH_ATTACHMENT,
-    TEST_WATCHFOLDER_SUBFOLDER
+    TEST_EMAIL_BASE64_FILENAME_ATTACHMENT_FILENAME, TEST_EMAIL_BASE64_FILENAME_FROM,
+    TEST_EMAIL_BASE64_FILENAME_SUBJECT, TEST_EMAIL_INLINE_IMAGE,
+    TEST_EMAIL_NO_CONTENT_TYPE, TEST_EMAIL_NO_CONTENT_TYPE_STRING,
+    TEST_EMAIL_ZERO_LENGTH_ATTACHMENT, TEST_WATCHFOLDER_SUBFOLDER
 )
 from .mixins import (
-    StagingFolderTestMixin, WatchFolderTestMixin, WebFormSourceTestMixin
+    IMAPEmailSourceTestMixin, POP3EmailSourceTestMixin,
+    SourceBackendTestMixin, StagingFolderTestMixin, WatchFolderTestMixin,
+    WebFormSourceTestMixin
 )
 from .mocks import MockIMAPServer, MockPOP3Mailbox, MockRequest
 
 
-#TODO: move to mixins
-class SourceBackendTestMixin:
-    class MockSourceForm:
-        def __init__(self, **kwargs):
-            self.cleaned_data = kwargs
-
-    def setUp(self):
-        super().setUp()
-        self.test_document_form = self.get_test_document_form()
-
-    def get_test_document_form(self):
-        document_form = NewDocumentForm(
-            data={}, document_type=self.test_document_type
-        )
-        document_form.full_clean()
-
-        return document_form
-
-    def get_test_request(self):
-        return MockRequest(user=self._test_case_user)
-
-
 class IMAPSourceBackendTestCase(
-    SourceBackendTestMixin, StagingFolderTestMixin, GenericDocumentTestCase
+    SourceBackendTestMixin, IMAPEmailSourceTestMixin, GenericDocumentTestCase
 ):
     auto_upload_test_document = False
 
-    #def _create_test_imap_source(self):
+    @mock.patch('imaplib.IMAP4_SSL', autospec=True)
+    def _process_test_document(self, mock_imaplib):
+        mock_imaplib.return_value = MockIMAPServer()
 
-
-    def _process_test_document(self, test_file_path=TEST_SMALL_DOCUMENT_PATH):
         source_backend_instance = self.test_source.get_backend_instance()
 
-        self.test_forms = {
-            'document_form': self.test_document_form,
-            'source_form': SourceBackendTestMixin.MockSourceForm(
-                staging_file_id=self.test_staging_folder_file.encoded_filename
-            ),
-        }
-
-        source_backend_instance.process_documents(
-            document_type=self.test_document_type, forms=self.test_forms,
-            request=self.get_test_request()
-        )
+        source_backend_instance.process_documents()
 
     def test_upload_simple_file(self):
-        self._create_test_imap_source()
-        self._copy_test_document_to_test_staging_folder()
+        self._create_test_imap_email_source()
 
         document_count = Document.objects.count()
 
         self._process_test_document()
-
         self.assertEqual(Document.objects.count(), document_count + 1)
         self.assertEqual(
-            Document.objects.first().file_latest.checksum,
-            TEST_SMALL_DOCUMENT_CHECKSUM
+            Document.objects.first().label,
+            TEST_EMAIL_BASE64_FILENAME_ATTACHMENT_FILENAME
         )
+
+
+class POP3SourceTestCase(
+    SourceBackendTestMixin, POP3EmailSourceTestMixin, GenericDocumentTestCase
+):
+    auto_upload_test_document = False
+
+    @mock.patch('poplib.POP3_SSL', autospec=True)
+    def _process_test_document(self, mock_poplib):
+        mock_poplib.return_value = MockPOP3Mailbox()
+
+        source_backend_instance = self.test_source.get_backend_instance()
+
+        source_backend_instance.process_documents()
+
+    def test_upload_simple_file(self):
+        self._create_test_pop3_email_source()
+
+        document_count = Document.objects.count()
+
+        self._process_test_document()
+        self.assertEqual(Document.objects.count(), document_count + 1)
+        self.assertEqual(
+            Document.objects.first().label,
+            TEST_EMAIL_BASE64_FILENAME_ATTACHMENT_FILENAME
+        )
+
 
 
 class StagingFolderSourceBackendTestCase(

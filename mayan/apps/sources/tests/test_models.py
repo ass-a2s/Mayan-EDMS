@@ -231,23 +231,6 @@ class EmailBaseTestCase(GenericDocumentTestCase):
             )
 
 
-class IMAPSourceTestCase(GenericDocumentTestCase):
-    auto_upload_test_document = False
-
-    @mock.patch('imaplib.IMAP4_SSL', autospec=True)
-    def test_download_document(self, mock_imaplib):
-        mock_imaplib.return_value = MockIMAPServer()
-        self.source = IMAPEmail.objects.create(
-            document_type=self.test_document_type, label='', host='',
-            password='', username=''
-        )
-
-        self.source.check_source()
-        self.assertEqual(
-            Document.objects.first().label, 'Ampelm\xe4nnchen.txt'
-        )
-
-
 class IntervalSourceTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
     auto_upload_test_document = False
 
@@ -263,23 +246,6 @@ class IntervalSourceTestCase(WatchFolderTestMixin, GenericDocumentTestCase):
 
         self.test_document_type.delete()
         self.assertTrue(PeriodicTask.objects.count() < periodic_task_count)
-
-
-class POP3SourceTestCase(GenericDocumentTestCase):
-    auto_upload_test_document = False
-
-    @mock.patch('poplib.POP3_SSL', autospec=True)
-    def test_download_document(self, mock_poplib):
-        mock_poplib.return_value = MockPOP3Mailbox()
-        self.source = POP3Email.objects.create(
-            document_type=self.test_document_type, label='', host='',
-            password='', username=''
-        )
-
-        self.source.check_source()
-        self.assertEqual(
-            Document.objects.first().label, 'Ampelm\xe4nnchen.txt'
-        )
 
 
 class SANESourceTestCase(GenericDocumentTestCase):
@@ -302,7 +268,4 @@ class SANESourceTestCase(GenericDocumentTestCase):
             form_data={'document_type': self.test_document_type.pk}
         )
         self.assertTrue(file_object.size > 0)
-
-
-
 '''
