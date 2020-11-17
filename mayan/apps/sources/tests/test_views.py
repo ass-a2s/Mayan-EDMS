@@ -19,7 +19,7 @@ from ..permissions import (
     permission_staging_file_delete
 )
 
-from .literals import TEST_SOURCE_LABEL, TEST_SOURCE_UNCOMPRESS_N
+from .literals import TEST_SOURCE_LABEL#, TEST_SOURCE_UNCOMPRESS_N
 from .mixins import (
     DocumentFileUploadViewTestMixin, DocumentUploadIssueViewTestMixin,
     DocumentUploadWizardViewTestMixin, StagingFolderTestMixin,
@@ -250,22 +250,6 @@ class DocumentFileUploadViewTestCase(
 class SourceViewTestCase(
     WebFormSourceTestMixin, SourceViewTestMixin, GenericViewTestCase
 ):
-    def test_source_check_get_view_no_permission(self):
-        self._create_test_web_form_source()
-
-        response = self._request_test_source_check_get_view()
-        self.assertEqual(response.status_code, 404)
-
-    def test_source_check_get_view_with_access(self):
-        self._create_test_web_form_source()
-
-        self.grant_access(
-            obj=self.test_source, permission=permission_sources_edit
-        )
-
-        response = self._request_test_source_check_get_view()
-        self.assertEqual(response.status_code, 200)
-
     def test_source_create_view_no_permission(self):
         source_count = Source.objects.count()
 
@@ -366,6 +350,22 @@ class SourceViewTestCase(
         self.assertContains(
             response=response, text=self.test_source.label, status_code=200
         )
+
+    def test_source_test_get_view_no_permission(self):
+        self._create_test_web_form_source()
+
+        response = self._request_test_source_test_get_view()
+        self.assertEqual(response.status_code, 404)
+
+    def test_source_test_get_view_with_access(self):
+        self._create_test_web_form_source()
+
+        self.grant_access(
+            obj=self.test_source, permission=permission_sources_edit
+        )
+
+        response = self._request_test_source_test_get_view()
+        self.assertEqual(response.status_code, 200)
 
 
 '''

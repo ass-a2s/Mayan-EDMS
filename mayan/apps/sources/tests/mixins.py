@@ -21,8 +21,9 @@ from ..source_backends.literals import (
 )
 
 from .literals import (
-    TEST_SOURCE_BACKEND_EMAIL_PATH, TEST_SOURCE_BACKEND_PERIODIC_PATH,
-    TEST_SOURCE_LABEL, TEST_SOURCE_LABEL_EDITED, TEST_STAGING_PREVIEW_WIDTH
+    TEST_SOURCE_BACKEND_PATH, TEST_SOURCE_BACKEND_EMAIL_PATH,
+    TEST_SOURCE_BACKEND_PERIODIC_PATH, TEST_SOURCE_LABEL,
+    TEST_SOURCE_LABEL_EDITED, TEST_STAGING_PREVIEW_WIDTH
 )
 
 from .mocks import MockRequest
@@ -116,12 +117,14 @@ class EmailSourceBackendTestMixin(SourceTestMixin):
     def _create_test_email_source_backend(self, extra_data=None):
         backend_data = {
             'document_type_id': self.test_document_type.pk,
+            'from_metadata_type_id': None,
             'host': '',
             'interval': DEFAULT_PERIOD_INTERVAL,
             'metadata_attachment_name': DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
             'password': '',
             'port': '',
             'ssl': True,
+            'subject_metadata_type_id': None,
             'store_body': False,
             'username': ''
         }
@@ -140,6 +143,7 @@ class IMAPEmailSourceTestMixin(SourceTestMixin):
         backend_data = {
             'document_type_id': self.test_document_type.pk,
             'execute_expunge': True,
+            'from_metadata_type_id': None,
             'host': '',
             'interval': DEFAULT_PERIOD_INTERVAL,
             'mailbox': DEFAULT_EMAIL_IMAP_MAILBOX,
@@ -151,6 +155,7 @@ class IMAPEmailSourceTestMixin(SourceTestMixin):
             'ssl': True,
             'store_body': False,
             'store_commands': DEFAULT_EMAIL_IMAP_STORE_COMMANDS,
+            'subject_metadata_type_id': None,
             'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER,
             'username': ''
         }
@@ -204,6 +209,7 @@ class POP3EmailSourceTestMixin(SourceTestMixin):
     def _create_test_pop3_email_source(self, extra_data=None):
         backend_data = {
             'document_type_id': self.test_document_type.pk,
+            'from_metadata_type_id': None,
             'host': '',
             'interval': DEFAULT_PERIOD_INTERVAL,
             'metadata_attachment_name': DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
@@ -211,6 +217,7 @@ class POP3EmailSourceTestMixin(SourceTestMixin):
             'port': '',
             'ssl': True,
             'store_body': False,
+            'subject_metadata_type_id': None,
             'timeout': DEFAULT_EMAIL_POP3_TIMEOUT,
             'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER,
             'username': ''
@@ -358,20 +365,6 @@ class SourceViewTestMixin:
             viewname='sources:source_backend_selection'
         )
 
-    def _request_test_source_check_get_view(self):
-        return self.get(
-            viewname='sources:source_check', kwargs={
-                'source_id': self.test_source.pk
-            }
-        )
-
-    def _request_test_source_check_post_view(self):
-        return self.post(
-            viewname='sources:source_check', kwargs={
-                'source_id': self.test_source.pk
-            }
-        )
-
     def _request_test_source_create_view(self):
         pk_list = list(Source.objects.values_list('pk', flat=True))
 
@@ -412,6 +405,20 @@ class SourceViewTestMixin:
 
     def _request_test_source_list_view(self):
         return self.get(viewname='sources:source_list')
+
+    def _request_test_source_test_get_view(self):
+        return self.get(
+            viewname='sources:source_test', kwargs={
+                'source_id': self.test_source.pk
+            }
+        )
+
+    def _request_test_source_test_post_view(self):
+        return self.post(
+            viewname='sources:source_test', kwargs={
+                'source_id': self.test_source.pk
+            }
+        )
 
 
 class WatchFolderTestMixin(SourceTestMixin):

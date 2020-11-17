@@ -43,18 +43,15 @@ class EmailSourceBackendTestCase(
 ):
     auto_upload_test_document = False
 
-    def setUp(self):
-        super().setUp()
-        self._create_test_email_source_backend()
-        self.source_backend_instance = self.test_source.get_backend_instance()
-
     def test_decode_email_base64_encoded_filename(self):
         """
         Test decoding of base64 encoded e-mail attachment filename.
         """
-        self.source_backend_instance.content = TEST_EMAIL_BASE64_FILENAME
+        self._create_test_email_source_backend()
+        source_backend_instance = self.test_source.get_backend_instance()
+        source_backend_instance.content = TEST_EMAIL_BASE64_FILENAME
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.process_documents()
 
         self.assertEqual(
             Document.objects.first().label,
@@ -62,25 +59,36 @@ class EmailSourceBackendTestCase(
         )
 
     def test_decode_email_no_content_type(self):
-        self.source_backend_instance.content = TEST_EMAIL_NO_CONTENT_TYPE
+        self._create_test_email_source_backend(extra_data={'store_body': True})
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = TEST_EMAIL_NO_CONTENT_TYPE
+
+        source_backend_instance.process_documents()
 
         self.assertTrue(
             TEST_EMAIL_NO_CONTENT_TYPE_STRING in Document.objects.first().file_latest.open().read()
         )
 
     def test_decode_email_zero_length_attachment(self):
-        self.source_backend_instance.content = TEST_EMAIL_ZERO_LENGTH_ATTACHMENT
+        self._create_test_email_source_backend()
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = TEST_EMAIL_ZERO_LENGTH_ATTACHMENT
+
+        source_backend_instance.process_documents()
 
         self.assertEqual(Document.objects.count(), 0)
 
     def test_decode_email_with_inline_image(self):
-        self.source_backend_instance.content = TEST_EMAIL_INLINE_IMAGE
+        self._create_test_email_source_backend(
+            extra_data={'store_body': True}
+        )
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = TEST_EMAIL_INLINE_IMAGE
+
+        source_backend_instance.process_documents()
 
         # Silence expected errors in other apps
         self._silence_logger(name='mayan.apps.converter.backends')
@@ -93,9 +101,13 @@ class EmailSourceBackendTestCase(
         )
 
     def test_decode_email_with_attachment_and_inline_image(self):
-        self.source_backend_instance.content = TEST_EMAIL_ATTACHMENT_AND_INLINE
+        self._create_test_email_source_backend(
+            extra_data={'store_body': True}
+        )
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = TEST_EMAIL_ATTACHMENT_AND_INLINE
+        source_backend_instance.process_documents()
 
         # Silence expected errors in other apps
         self._silence_logger(name='mayan.apps.converter.backends')
@@ -113,13 +125,18 @@ class EmailSourceBackendTestCase(
         self.test_document_type.metadata.create(metadata_type=metadata_from)
         self.test_document_type.metadata.create(metadata_type=metadata_subject)
 
-        self.source_backend_instance.content = TEST_EMAIL_BASE64_FILENAME
+        self._create_test_email_source_backend(
+            extra_data={
+                'from_metadata_type_id': metadata_from.pk,
+                'subject_metadata_type_id': metadata_subject.pk
+            }
+        )
+        source_backend_instance = self.test_source.get_backend_instance()
+        #source_backend_instance.kwargs['from_metadata_type_id'] = metadata_from
+        #source_backend_instance.kwargs['subject_metadata_type_id'] = metadata_subject
 
-        self.source_backend_instance.process_documents()
-
-        #self.test_source.from_metadata_type = metadata_from
-        #self.source.subject_metadata_type = metadata_subject
-        #self.source.save()
+        source_backend_instance.content = TEST_EMAIL_BASE64_FILENAME
+        source_backend_instance.process_documents()
 
         document = Document.objects.first()
 
@@ -136,9 +153,11 @@ class EmailSourceBackendTestCase(
         )
 
     def test_document_upload_no_body(self):
-        self.source_backend_instance.content = TEST_EMAIL_ATTACHMENT_AND_INLINE
+        self._create_test_email_source_backend()
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = TEST_EMAIL_ATTACHMENT_AND_INLINE
+        source_backend_instance.process_documents()
 
         # Silence expected errors in other apps
         self._silence_logger(name='mayan.apps.converter.backends')
@@ -147,9 +166,13 @@ class EmailSourceBackendTestCase(
         self.assertEqual(1, Document.objects.count())
 
     def test_document_upload_with_body(self):
-        self.source_backend_instance.content = TEST_EMAIL_ATTACHMENT_AND_INLINE
+        self._create_test_email_source_backend(
+            extra_data={'store_body': True}
+        )
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = TEST_EMAIL_ATTACHMENT_AND_INLINE
+        source_backend_instance.process_documents()
 
         # Silence expected errors in other apps
         self._silence_logger(name='mayan.apps.converter.backends')
@@ -203,11 +226,14 @@ class EmailSourceBackendTestCase(
 
             email_message.send()
 
-        self.source_backend_instance.content = mail.outbox[0].message()
+        self._create_test_email_source_backend(
+            extra_data={'store_body': True}
+        )
+        source_backend_instance = self.test_source.get_backend_instance()
 
-        self.source_backend_instance.process_documents()
+        source_backend_instance.content = mail.outbox[0].message()
 
-        #self.source.store_body = True
+        source_backend_instance.process_documents()
 
         self.assertEqual(Document.objects.count(), 2)
 

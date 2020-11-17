@@ -101,17 +101,3 @@ def metadata_repr_as_list(metadata_list):
             pass
 
     return output
-
-
-def set_bulk_metadata(document, metadata_dictionary):
-    document_type_metadata_types = document.document_type.metadata.values_list(
-        'metadata_type', flat=True
-    )
-
-    for metadata_type_name, value in metadata_dictionary.items():
-        metadata_type = MetadataType.objects.get(name=metadata_type_name)
-
-        if document_type_metadata_types.filter(metadata_type=metadata_type).exists():
-            DocumentMetadata.objects.get_or_create(
-                document=document, metadata_type=metadata_type, value=value
-            )

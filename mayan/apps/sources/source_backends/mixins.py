@@ -7,15 +7,12 @@ from django.apps import apps
 from django.core.exceptions import ValidationError
 from django.core.files import File
 from django.core.files.base import ContentFile
-from django.db import transaction
 from django.utils.encoding import force_bytes, force_text
 from django.utils.translation import ugettext, ugettext_lazy as _
 
 from mayan.apps.common.serialization import yaml_load
-from mayan.apps.documents.models.document_models import Document
 from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.documents.tasks import task_document_file_upload
-from mayan.apps.metadata.api import set_bulk_metadata
 from mayan.apps.metadata.models import MetadataType
 from mayan.apps.storage.models import SharedUploadedFile
 
@@ -253,70 +250,56 @@ class SourceBackendEmailMixin:
 
         return result
 
-    @staticmethod
-    def process_message(source, message):
-        from flanker import mime
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.document_metadata = {}
 
-        metadata_dictionary = {}
+    def process_message(self, message):
+        from flanker import mime
 
         message = mime.from_string(string=force_bytes(s=message))
 
-        #if source.from_metadata_type:
-        #    metadata_dictionary[
-        #        source.from_metadata_type.name
-        #    ] = message.headers.get('From')
+        shared_uploaded_files = self._process_message(message=message)
 
-        #if source.subject_metadata_type:
-        #    metadata_dictionary[
-        #        source.subject_metadata_type.name
-        #    ] = message.headers.get('Subject')
+        # Process source metadata after messages to avoid the metadata
+        # attachment to be used to override the source metadata.
 
-        shared_uploaded_files, parts_metadata_dictionary = SourceBackendEmailMixin._process_message(
-            source=source, message=message
-        )
+        from_metadata_type = self.get_from_metadata_type()
+        if from_metadata_type:
+            self.document_metadata[from_metadata_type.pk] = message.headers.get('From')
 
-        metadata_dictionary.update(parts_metadata_dictionary)
-
-        #TODO: move to callback
-        #if metadata_dictionary:
-        #    for document in Document.objects.filter(id__in=document_ids):
-        #        set_bulk_metadata(
-        #            document=document,
-        #            metadata_dictionary=metadata_dictionary
-        #        )
+        subject_metadata_type = self.get_subject_metadata_type()
+        if subject_metadata_type:
+            self.document_metadata[subject_metadata_type.pk] = message.headers.get('Subject')
 
         return shared_uploaded_files
 
-    @staticmethod
-    def _process_message(source, message):
+    def _process_message(self, message):
         counter = 1
-        document_ids = []
-        metadata_dictionary = {}
         shared_uploaded_files = []
 
         # Messages are tree based, do nested processing of message parts until
         # a message with no children is found, then work out way up.
         if message.parts:
             for part in message.parts:
-                part_shared_uploaded_files, part_metadata_dictionary = SourceBackendEmailMixin._process_message(
-                    source=source, message=part,
+                part_shared_uploaded_files = self._process_message(
+                    message=part
                 )
 
                 shared_uploaded_files.extend(part_shared_uploaded_files)
-                metadata_dictionary.update(part_metadata_dictionary)
         else:
             # Treat inlines as attachments, both are extracted and saved as
             # documents
             if message.is_attachment() or message.is_inline():
                 # Reject zero length attachments
                 if len(message.body) == 0:
-                    return document_ids, metadata_dictionary
+                    return shared_uploaded_files
 
                 label = message.detected_file_name or 'attachment-{}'.format(counter)
                 counter = counter + 1
 
                 with ContentFile(content=message.body, name=label) as file_object:
-                    if label == source.kwargs['metadata_attachment_name']:
+                    if label == self.kwargs['metadata_attachment_name']:
                         metadata_dictionary = yaml_load(
                             stream=file_object.read()
                         )
@@ -324,6 +307,9 @@ class SourceBackendEmailMixin:
                             'Got metadata dictionary: %s',
                             metadata_dictionary
                         )
+                        for metadata_name, value in metadata_dictionary.items():
+                            metadata = MetadataType.objects.get(name=metadata_name)
+                            self.document_metadata[metadata.pk] = value
                     else:
                         shared_uploaded_files.append(
                             SharedUploadedFile.objects.create(
@@ -338,7 +324,7 @@ class SourceBackendEmailMixin:
                 else:
                     label = 'email_body.txt'
 
-                if source.kwargs['store_body']:
+                if self.kwargs['store_body']:
                     with ContentFile(content=force_bytes(message.body), name=label) as file_object:
                         shared_uploaded_files.append(
                             SharedUploadedFile.objects.create(
@@ -346,7 +332,15 @@ class SourceBackendEmailMixin:
                             )
                         )
 
-        return shared_uploaded_files, metadata_dictionary
+        return shared_uploaded_files
+
+    def callback(self, document_file, **kwargs):
+        for metadata_type_id, value in kwargs['document_metadata'].items():
+            metadata_type = MetadataType.objects.get(pk=metadata_type_id)
+
+            document_file.document.metadata.create(
+                metadata_type=metadata_type, value=value
+            )
 
     def clean(self):
         document_type = self.get_document_type()
@@ -387,6 +381,13 @@ class SourceBackendEmailMixin:
                         }
                     }
                 )
+
+    def get_callback_kwargs(self):
+        callback_kwargs = super().get_callback_kwargs()
+        callback_kwargs.update({'document_metadata': self.document_metadata})
+
+        return callback_kwargs
+
     def get_from_metadata_type(self):
         try:
             return MetadataType.objects.get(

@@ -8,6 +8,10 @@ from ..source_backends.mixins import (
 )
 
 
+class SourceBackendSimple(SourceBaseMixin, SourceBackend):
+    label = 'Test source backend'
+
+
 class SourceBackendTestPeriodic(
     SourceBackendPeriodicMixin, SourceBaseMixin, SourceBackend
 ):
@@ -21,6 +25,4 @@ class SourceBackendTestEmail(
     label = 'Test email source backend'
 
     def get_shared_uploaded_files(self):
-        return self.process_message(
-            source=self, message=self.content
-        )
+        return self.process_message(message=self.content)

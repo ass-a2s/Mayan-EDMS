@@ -155,7 +155,7 @@ class SourceBackendIMAPEmail(
 
                 try:
                     shared_uploaded_files = self.process_message(
-                        source=self, message=data[0][1]
+                        message=data[0][1]
                     )
                 except Exception as exception:
                     raise SourceException(
@@ -253,7 +253,7 @@ class SourceBackendPOP3Email(
             message_complete = force_text(s=b'\n'.join(message_lines))
 
             shared_uploaded_files = self.process_message(
-                source=self, message=message_complete
+                message=message_complete
             )
             if not dry_run:
                 server.dele(which=message_number)

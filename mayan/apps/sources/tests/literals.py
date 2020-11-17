@@ -137,6 +137,7 @@ Content-MD5: 1B2M2Y8AsgTpgAmY7PhCfg==
 -----'''
 TEST_SOURCE_BACKEND_EMAIL_PATH = 'mayan.apps.sources.tests.source_backends.SourceBackendTestEmail'
 TEST_SOURCE_BACKEND_PERIODIC_PATH = 'mayan.apps.sources.tests.source_backends.SourceBackendTestPeriodic'
+TEST_SOURCE_BACKEND_PATH = 'mayan.apps.sources.tests.source_backends.SourceBackendSimple'
 TEST_SOURCE_LABEL = 'test source'
 TEST_SOURCE_LABEL_EDITED = 'test source edited'
 TEST_STAGING_PREVIEW_WIDTH = 640
