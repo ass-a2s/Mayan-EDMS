@@ -9,7 +9,6 @@ from furl import furl
 from django.apps import apps
 from django.core.files import File
 from django.core.files.base import ContentFile
-from django.core.exceptions import ImproperlyConfigured
 from django.urls import reverse
 from django.utils import six
 from django.utils.encoding import force_text

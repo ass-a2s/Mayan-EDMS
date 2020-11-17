@@ -2,22 +2,15 @@ import logging
 
 from django.contrib import messages
 from django.http import HttpResponseRedirect, JsonResponse
-from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
-from mayan.apps.acls.models import AccessControlList
-from mayan.apps.documents.models import (
-    DocumentType, Document, DocumentFile
-)
+from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.documents.permissions import permission_document_create
-from mayan.apps.storage.models import SharedUploadedFile
 from mayan.apps.views.mixins import ExternalObjectMixin
 
-from ..exceptions import SourceException
 from ..forms import NewDocumentForm
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_ASK, SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 from ..models import Source
 
 from .base import UploadBaseView

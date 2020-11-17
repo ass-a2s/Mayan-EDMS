@@ -1,4 +1,3 @@
-import json
 import logging
 
 from django.contrib.auth import get_user_model
@@ -7,13 +6,9 @@ from django.db import models, transaction
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
-from django_celery_beat.models import PeriodicTask, IntervalSchedule
-from model_utils.managers import InheritanceManager
-
 from mayan.apps.common.mixins import BackendModelMixin
 from mayan.apps.converter.layers import layer_saved_transformations
 from mayan.apps.documents.models.document_models import Document
-from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.documents.tasks import task_document_upload
 from mayan.apps.storage.compressed_files import Archive
 from mayan.apps.storage.exceptions import NoMIMETypeMatch
@@ -21,7 +16,6 @@ from mayan.apps.storage.models import SharedUploadedFile
 
 from .classes import SourceBackendNull
 from .managers import SourceManager
-from .wizards import WizardStep
 
 logger = logging.getLogger(name=__name__)
 
@@ -84,8 +78,6 @@ class Source(BackendModelMixin, models.Model):
         Handle an upload request from a file object which may be an individual
         document or a compressed file containing multiple documents.
         """
-        #documents = []
-
         callback_kwargs = callback_kwargs or {}
 
         if expand:
@@ -152,10 +144,6 @@ class Source(BackendModelMixin, models.Model):
                 'callback_kwargs': final_callback_kwargs
             }
         )
-
-        # Return a list of newly created documents. Used by the email source
-        # to assign the from and subject metadata values.
-        #return documents
 
     def save(self, *args, **kwargs):
         create = not self.pk

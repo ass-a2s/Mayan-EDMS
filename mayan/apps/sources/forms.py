@@ -5,7 +5,7 @@ from django import forms
 from django.db.models import Model
 from django.db.models.query import QuerySet
 from django.utils.encoding import force_text
-from django.utils.translation import ugettext, ugettext_lazy as _
+from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.documents.forms.document_forms import DocumentForm
 from mayan.apps.documents.literals import DOCUMENT_FILE_ACTION_PAGE_CHOICES
@@ -82,17 +82,12 @@ class SourceBackendDynamicForm(DynamicModelForm):
         widgets = {'backend_data': forms.widgets.HiddenInput}
 
     def __init__(self, *args, **kwargs):
-        #self.request = kwargs.pop('request')
-        #self.backend_data = kwargs.pop('backend_data')
 
         super().__init__(*args, **kwargs)
         if self.instance.backend_data:
             backend_data = json.loads(s=self.instance.backend_data)
             for key in self.instance.get_backend().fields:
                 self.fields[key].initial = backend_data.get(key, None)
-
-            #for key, value in json.loads(s=self.instance.backend_data).items():
-            #    self.fields[key].initial = value
 
     def clean(self):
         data = super().clean()
@@ -114,10 +109,6 @@ class SourceBackendDynamicForm(DynamicModelForm):
                 # Store only the ID of a model instance
                 backend_data[field_name] = backend_data[field_name].pk
 
-        #data['backend_data'] = backend_data
-        #data = import_string(dotted_path=self.action_path).clean(
-        #    form_data=data, request=self.request
-        #)
         data['backend_data'] = json.dumps(obj=backend_data)
         return data
 

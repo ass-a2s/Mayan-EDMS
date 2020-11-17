@@ -14,10 +14,6 @@ from .icons import (
     icon_source_delete, icon_source_edit, icon_source_list,
     icon_staging_file_delete
 )
-#from .literals import (
-#    SOURCE_CHOICE_WEB_FORM, SOURCE_CHOICE_EMAIL_IMAP, SOURCE_CHOICE_EMAIL_POP3,
-#    SOURCE_CHOICE_SANE_SCANNER, SOURCE_CHOICE_STAGING, SOURCE_CHOICE_WATCH
-#)
 from .permissions import (
     permission_sources_create, permission_sources_delete,
     permission_sources_edit, permission_sources_view

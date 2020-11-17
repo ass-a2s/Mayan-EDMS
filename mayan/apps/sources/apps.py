@@ -80,6 +80,7 @@ class SourcesApp(MayanAppConfig):
 
         ModelPermission.register(
             model=Source, permissions=(
+                permission_acl_edit, permission_acl_view,
                 permission_sources_delete, permission_sources_edit,
                 permission_sources_view,
             )
