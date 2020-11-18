@@ -22,7 +22,7 @@ from mayan.apps.common.menus import (
     menu_list_facet, menu_object, menu_related, menu_secondary, menu_setup
 )
 
-from .classes import SourceBackend, StagingFile
+from .classes import SourceBackend
 from .handlers import (
     handler_create_default_document_source,
     handler_delete_interval_source_periodic_task,
@@ -31,13 +31,12 @@ from .handlers import (
 from .links import (
     link_document_create_multiple, link_source_test,
     link_source_backend_selection, link_source_delete, link_source_edit,
-    link_source_list, link_staging_file_delete, link_document_file_upload
+    link_source_list, link_document_file_upload
 )
 from .permissions import (
     permission_sources_delete, permission_sources_edit,
     permission_sources_view
 )
-from .widgets import StagingFileThumbnailWidget
 
 
 class SourcesApp(MayanAppConfig):
@@ -99,20 +98,6 @@ class SourcesApp(MayanAppConfig):
             widget=TwoStateWidget
         )
 
-        SourceColumn(
-            func=lambda context: context['object'].get_date_time_created(),
-            label=_('Created'), source=StagingFile,
-        )
-
-        html_widget = StagingFileThumbnailWidget()
-        SourceColumn(
-            source=StagingFile,
-            label=_('Thumbnail'),
-            func=lambda context: html_widget.render(
-                instance=context['object'],
-            )
-        )
-
         menu_documents.bind_links(links=(link_document_create_multiple,))
 
         menu_list_facet.bind_links(
@@ -130,9 +115,7 @@ class SourcesApp(MayanAppConfig):
                 Source,
             )
         )
-        menu_object.bind_links(
-            links=(link_staging_file_delete,), sources=(StagingFile,)
-        )
+
         menu_object.bind_links(
             links=(link_source_test,),
             sources=(Source,)

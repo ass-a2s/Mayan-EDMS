@@ -19,18 +19,18 @@ setting_scanimage_path = namespace.add_setting(
     ),
     is_path=True
 )
-setting_staging_file_image_cache_storage = namespace.add_setting(
-    global_name='SOURCES_STAGING_FILE_CACHE_STORAGE_BACKEND',
+setting_source_cache_storage = namespace.add_setting(
+    global_name='SOURCES_SOURCE_CACHE_STORAGE_BACKEND',
     default='django.core.files.storage.FileSystemStorage', help_text=_(
-        'Path to the Storage subclass to use when storing the cached '
-        'staging_file image files.'
+        'Path to the Storage subclass used to store cached '
+        'source image files.'
     )
 )
-setting_staging_file_image_cache_storage_arguments = namespace.add_setting(
-    global_name='SOURCES_STAGING_FILE_CACHE_STORAGE_BACKEND_ARGUMENTS',
+setting_source_cache_storage_arguments = namespace.add_setting(
+    global_name='SOURCES_SOURCE_CACHE_STORAGE_BACKEND_ARGUMENTS',
     default={
-        'location': os.path.join(settings.MEDIA_ROOT, 'staging_file_cache')
+        'location': os.path.join(settings.MEDIA_ROOT, 'source_cache')
     }, help_text=_(
-        'Arguments to pass to the SOURCES_STAGING_FILE_CACHE_STORAGE_BACKEND.'
+        'Arguments to pass to the SOURCES_SOURCE_CACHE_STORAGE_BACKEND.'
     )
 )

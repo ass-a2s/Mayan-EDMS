@@ -19,6 +19,6 @@ permission_sources_view = namespace.add_permission(
     label=_('View existing document sources'), name='sources_setup_view'
 )
 
-permission_staging_file_delete = namespace.add_permission(
-    label=_('Delete staging files'), name='sources_staging_file_delete'
-)
+#permission_staging_file_delete = namespace.add_permission(
+#    label=_('Delete staging files'), name='sources_staging_file_delete'
+#)

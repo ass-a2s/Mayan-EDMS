@@ -1,13 +1,46 @@
+import base64
 import logging
 import os
+import time
+from urllib.parse import quote_plus, unquote_plus
 
+from furl import furl
+
+from django.apps import apps
+from django.core.files import File
+from django.core.files.base import ContentFile
+from django.conf.urls import url
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import six
+from django.utils.encoding import force_text
+from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
-from mayan.apps.appearance.classes import Icon
-from mayan.apps.storage.models import SharedUploadedFile
+from rest_framework import serializers
+from rest_framework.reverse import reverse
 
-from ..classes import SourceBackend, StagingFile
+from mayan.apps.appearance.classes import Icon
+from mayan.apps.common.class_mixins import AppsModuleLoaderMixin
+from mayan.apps.common.menus import menu_object
+from mayan.apps.converter.classes import ConverterBase
+from mayan.apps.converter.transformations import TransformationResize
+from mayan.apps.documents.models.document_models import DocumentType
+from mayan.apps.documents.settings import (
+    setting_preview_width, setting_preview_height, setting_thumbnail_width,
+    setting_thumbnail_height
+)
+from mayan.apps.navigation.classes import Link, SourceColumn
+from mayan.apps.storage.classes import DefinedStorage
+from mayan.apps.storage.models import SharedUploadedFile
+from mayan.apps.views.generics import SingleObjectDeleteView
+from mayan.apps.views.mixins import ExternalObjectMixin
+
+from ..classes import SourceBackend
 from ..forms import StagingUploadForm
+from ..literals import STORAGE_NAME_SOURCE_CACHE_FOLDER
+from ..models import Source
+from ..permissions import permission_sources_view
 
 from .mixins import (
     SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
@@ -16,6 +49,241 @@ from .mixins import (
 
 __all__ = ('SourceBackendStagingFolder',)
 logger = logging.getLogger(name=__name__)
+
+
+class StagingFile:
+    """
+    Simple class to extend the File class to add preview capabilities
+    files in a directory on a storage
+    """
+    def __init__(self, staging_folder, filename=None, encoded_filename=None):
+        self.staging_folder = staging_folder
+        if encoded_filename:
+            self.encoded_filename = str(encoded_filename)
+            self.filename = base64.urlsafe_b64decode(
+                unquote_plus(self.encoded_filename)
+            ).decode('utf8')
+        else:
+            self.filename = filename
+            self.encoded_filename = quote_plus(base64.urlsafe_b64encode(
+                filename.encode('utf8')
+            ))
+
+    def __str__(self):
+        return force_text(s=self.filename)
+
+    def as_file(self):
+        return File(
+            file=open(
+                file=self.get_full_path(), mode='rb'
+            ), name=self.filename
+        )
+
+    @property
+    def cache_filename(self):
+        return '{}{}'.format(
+            self.staging_folder.model_instance_id, self.encoded_filename
+        )
+
+    def delete(self):
+        self.storage.delete(self.cache_filename)
+        os.unlink(self.get_full_path())
+
+    def generate_image(self, *args, **kwargs):
+        transformation_list = self.get_combined_transformation_list(*args, **kwargs)
+
+        # Check is transformed image is available
+        logger.debug('transformations cache filename: %s', self.cache_filename)
+
+        if self.storage.exists(self.cache_filename):
+            logger.debug(
+                'staging file cache file "%s" found', self.cache_filename
+            )
+        else:
+            logger.debug(
+                'staging file cache file "%s" not found', self.cache_filename
+            )
+            image = self.get_image(transformations=transformation_list)
+            with self.storage.open(name=self.cache_filename, mode='wb+') as file_object:
+                file_object.write(image.getvalue())
+
+        return self.cache_filename
+
+    def get_api_image_url(self, *args, **kwargs):
+        final_url = furl()
+        final_url.args = kwargs
+        final_url.path = reverse(
+            'rest_api:stagingfolderfile-image', kwargs={
+                'staging_folder_pk': self.staging_folder.model_instance_id,
+                'encoded_filename': self.encoded_filename
+            }
+        )
+
+        return final_url.tostr()
+
+    def get_combined_transformation_list(self, *args, **kwargs):
+        """
+        Return a list of transformation containing the server side
+        staging file transformation as well as tranformations created
+        from the arguments as transient interactive transformation.
+        """
+        # Convert arguments into transformations
+        transformations = kwargs.get('transformations', [])
+
+        # Set sensible defaults if the argument is not specified or if the
+        # argument is None
+        width = self.staging_folder.kwargs.get('preview_width')
+        height = self.staging_folder.kwargs.get('preview_height')
+
+        # Generate transformation hash
+        transformation_list = []
+
+        # Interactive transformations second
+        for transformation in transformations:
+            transformation_list.append(transformation)
+
+        if width:
+            transformation_list.append(
+                TransformationResize(width=width, height=height)
+            )
+
+        return transformation_list
+
+    def get_date_time_created(self):
+        return time.ctime(os.path.getctime(self.get_full_path()))
+
+    def get_full_path(self):
+        return os.path.join(
+            self.staging_folder.kwargs['folder_path'], self.filename
+        )
+
+    def get_image(self, transformations=None):
+        cache_filename = self.cache_filename
+        file_object = None
+
+        try:
+            file_object = open(file=self.get_full_path(), mode='rb')
+            converter = ConverterBase.get_converter_class()(
+                file_object=file_object
+            )
+
+            page_image = converter.get_page()
+
+            # Since open "wb+" doesn't create files, check if the file
+            # exists, if not then create it
+            if not self.storage.exists(cache_filename):
+                self.storage.save(name=cache_filename, content=ContentFile(content=''))
+
+            with self.storage.open(name=cache_filename, mode='wb+') as file_object:
+                file_object.write(page_image.getvalue())
+        except Exception as exception:
+            # Cleanup in case of error
+            logger.error(
+                'Error creating staging file cache "%s"; %s',
+                cache_filename, exception
+            )
+            self.storage.delete(cache_filename)
+            if file_object:
+                file_object.close()
+            raise
+
+        for transformation in transformations:
+            converter.transform(transformation=transformation)
+
+        result = converter.get_page()
+        file_object.close()
+        return result
+
+    @cached_property
+    def storage(self):
+        return DefinedStorage.get(
+            name=STORAGE_NAME_SOURCE_CACHE_FOLDER
+        ).get_storage_instance()
+
+
+class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
+    external_object_class = Source
+    external_object_permission = permission_sources_view
+    external_object_pk_url_kwarg = 'staging_folder_id'
+
+    def get_extra_context(self):
+        return {
+            'object': self.object,
+            'object_name': _('Staging file'),
+            'title': _('Delete staging file "%s"?') % self.object,
+        }
+
+    def get_object(self):
+        return self.external_object.get_backend_instance().get_file(
+            encoded_filename=self.kwargs['encoded_filename']
+        )
+
+
+class StagingFileThumbnailWidget:
+    def render(self, instance):
+        return render_to_string(
+            template_name='documents/widgets/thumbnail.html',
+            context={
+                'container_class': 'staging-file-thumbnail-container',
+                'disable_title_link': True,
+                'gallery_name': 'sources:staging_list',
+                'instance': instance,
+                'size_preview_width': setting_preview_width.value,
+                'size_preview_height': setting_preview_height.value,
+                'size_thumbnail_width': setting_thumbnail_width.value,
+                'size_thumbnail_height': setting_thumbnail_height.value,
+            }
+        )
+
+
+
+class StagingFolderFileUploadSerializer(serializers.Serializer):
+    document_type = serializers.PrimaryKeyRelatedField(
+        label=_('Document type'), many=False,
+        queryset=DocumentType.objects.all(), read_only=False
+    )
+    expand = serializers.BooleanField(
+        default=False, label=_('Expand compressed files'), help_text=_(
+            'Upload a compressed file\'s contained files as individual '
+            'documents.'
+        )
+    )
+
+
+class StagingFolderFileSerializer(serializers.Serializer):
+    filename = serializers.CharField(max_length=255)
+    image_url = serializers.SerializerMethodField()
+    url = serializers.SerializerMethodField()
+    encoded_filename = serializers.CharField(max_length=255)
+    upload_url = serializers.SerializerMethodField()
+
+    def get_image_url(self, obj):
+        return reverse(
+            viewname='rest_api:stagingfolderfile-image',
+            kwargs={
+                'staging_folder_pk': obj.staging_folder.pk,
+                'encoded_filename': obj.encoded_filename
+            }, request=self.context.get('request')
+        )
+
+    def get_upload_url(self, obj):
+        return reverse(
+            viewname='rest_api:stagingfolderfile-upload',
+            kwargs={
+                'staging_folder_pk': obj.staging_folder.pk,
+                'encoded_filename': obj.encoded_filename,
+            }, request=self.context.get('request')
+        )
+
+    def get_url(self, obj):
+        return reverse(
+            viewname='rest_api:stagingfolderfile-detail',
+            kwargs={
+                'staging_folder_pk': obj.staging_folder.pk,
+                'encoded_filename': obj.encoded_filename
+            }, request=self.context.get('request')
+        )
+
 
 
 class SourceBackendStagingFolder(
@@ -74,6 +342,43 @@ class SourceBackendStagingFolder(
     label = _('Staging folder')
     upload_form_class = StagingUploadForm
 
+    @classmethod
+    def intialize(cls):
+        from ..urls import urlpatterns
+
+        icon_staging_file_delete = Icon(driver_name='fontawesome', symbol='times')
+
+        link_staging_file_delete = Link(
+            args=('source.pk', 'object.encoded_filename',), keep_query=True,
+            icon_class=icon_staging_file_delete,
+            permissions=(permission_sources_view,),
+            tags='dangerous', text=_('Delete'), view='sources:staging_file_delete',
+        )
+        menu_object.bind_links(
+            links=(link_staging_file_delete,), sources=(StagingFile,)
+        )
+        html_widget = StagingFileThumbnailWidget()
+
+        SourceColumn(
+            func=lambda context: context['object'].get_date_time_created(),
+            label=_('Created'), source=StagingFile,
+        )
+
+        SourceColumn(
+            source=StagingFile,
+            label=_('Thumbnail'),
+            func=lambda context: html_widget.render(
+                instance=context['object'],
+            )
+        )
+
+        urlpatterns += (
+            url(
+                regex=r'^staging_folders/(?P<staging_folder_id>\d+)/files/(?P<encoded_filename>.+)/delete/$',
+                name='staging_file_delete', view=StagingFileDeleteView.as_view()
+            ),
+        )
+
     #TODO: Implement post upload action
     def clean_up_upload_file(self, upload_file_object):
         if self.kwargs['delete_after_upload']:
@@ -113,8 +418,6 @@ class SourceBackendStagingFolder(
         )
 
     def get_view_context(self, context, request):
-        staging_filelist = list(self.get_files())
-
         subtemplates_list = [
             {
                 'name': 'appearance/generic_multiform_subtemplate.html',
@@ -137,7 +440,7 @@ class SourceBackendStagingFolder(
                     'no_results_title': _(
                         'No staging files available'
                     ),
-                    'object_list': staging_filelist,
+                    'object_list': list(self.get_files()),
                 }
             },
         ]

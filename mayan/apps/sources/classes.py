@@ -20,7 +20,7 @@ from mayan.apps.converter.classes import ConverterBase
 from mayan.apps.converter.transformations import TransformationResize
 from mayan.apps.storage.classes import DefinedStorage
 
-from .literals import STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
+#from .literals import STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
 
 logger = logging.getLogger(name=__name__)
 
@@ -62,6 +62,11 @@ class SourceBackend(
     upload_form_class = None
 
     @classmethod
+    def post_load_modules(cls):
+        for name, source_backend in cls.get_all().items():
+            source_backend.intialize()
+
+    @classmethod
     def get(cls, name):
         return cls._registry[name]
 
@@ -95,6 +100,10 @@ class SourceBackend(
             result['field_order'] = ()
 
         return result
+
+    @classmethod
+    def intialize(cls):
+        return
 
     def __init__(self, model_instance_id, **kwargs):
         self.model_instance_id = model_instance_id
@@ -142,6 +151,15 @@ class SourceBackendNull(SourceBackend):
     label = _('Null backend')
 
 
+
+#from django.conf.urls import url
+
+#urlpatterns = [
+#]
+
+
+
+'''
 class StagingFile:
     """
     Simple class to extend the File class to add preview capabilities
@@ -290,3 +308,4 @@ class StagingFile:
         return DefinedStorage.get(
             name=STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
         ).get_storage_instance()
+'''

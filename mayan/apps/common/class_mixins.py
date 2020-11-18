@@ -33,3 +33,9 @@ class AppsModuleLoaderMixin:
                         raise
                 finally:
                     cls._loader_module_sets[cls._loader_module_name].add(app)
+
+        cls.post_load_modules()
+
+    @classmethod
+    def post_load_modules(cls):
+        return

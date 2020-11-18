@@ -8,18 +8,19 @@ from .api_views import (
 from .views.document_file_views import DocumentFileUploadInteractiveView
 from .views.document_views import DocumentUploadInteractiveView
 from .views.source_views import (
-    SourceBackendSelectionView, SourceTestView, SourceCreateView,
-    SourceDeleteView, SourceEditView, SourceListView, StagingFileDeleteView
+    SourceBackendSelectionView, SourceCreateView,
+    SourceDeleteView, SourceEditView, SourceListView, SourceTestView,
+    #StagingFileDeleteView
 )
 from .wizards import DocumentCreateWizard
 
 urlpatterns = [
     # Staging folder files
 
-    url(
-        regex=r'^staging_folders/(?P<staging_folder_id>\d+)/files/(?P<encoded_filename>.+)/delete/$',
-        name='staging_file_delete', view=StagingFileDeleteView.as_view()
-    ),
+    #url(
+    #    regex=r'^staging_folders/(?P<staging_folder_id>\d+)/files/(?P<encoded_filename>.+)/delete/$',
+    #    name='staging_file_delete', view=StagingFileDeleteView.as_view()
+    #),
 
     # Document create views
 
@@ -74,7 +75,11 @@ urlpatterns = [
     url(
         regex=r'^sources/(?P<source_id>\d+)/test/$',
         name='source_test', view=SourceTestView.as_view()
-    )
+    ),
+    #url(
+    #    regex=r'^sources/(?P<source_id>\d+)/views/(?P<view_name>[a-zA-Z0-9_.]+)/$',
+    #    name='source_backend_view', view=SourceBackendView.as_view()
+    #),
 ]
 
 api_urls = [

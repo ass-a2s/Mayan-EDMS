@@ -15,17 +15,16 @@ from mayan.apps.storage.classes import DefinedStorage
 from mayan.apps.storage.models import SharedUploadedFile
 
 from .literals import (
-    STAGING_FILE_IMAGE_TASK_TIMEOUT, STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
+    STAGING_FILE_IMAGE_TASK_TIMEOUT, STORAGE_NAME_SOURCE_CACHE_FOLDER
 )
 from .models import Source#, StagingFolderSource
 from .permissions import (
     permission_sources_create, permission_sources_delete,
-    permission_sources_edit, permission_sources_view,
-    permission_staging_file_delete
+    permission_sources_edit, permission_sources_view
 )
-from .serializers import (
+from .serializers import SourceSerializer
+from .source_backends.staging_folder_backends import (
     StagingFolderFileSerializer, StagingFolderFileUploadSerializer,
-    SourceSerializer
 )
 from .tasks import (
     task_generate_staging_file_image#, task_source_handle_upload
@@ -77,7 +76,7 @@ class APIStagingSourceFileView(generics.RetrieveDestroyAPIView):
     def get_object(self):
         if self.request.method == 'DELETE':
             Permission.check_user_permissions(
-                permissions=(permission_staging_file_delete,),
+                permissions=(permission_sources_view,),
                 user=self.request.user
             )
 
@@ -120,7 +119,7 @@ class APIStagingSourceFileImageView(generics.RetrieveAPIView):
 
         cache_filename = task.get(**kwargs)
         storage_staging_file_image_cache = DefinedStorage.get(
-            name=STORAGE_NAME_SOURCE_STAGING_FOLDER_FILE
+            name=STORAGE_NAME_SOURCE_CACHE_FOLDER
         ).get_storage_instance()
 
         with storage_staging_file_image_cache.open(name=cache_filename) as file_object:

@@ -21,14 +21,13 @@ from ..models import Source
 from ..permissions import (
     permission_sources_create, permission_sources_delete,
     permission_sources_edit, permission_sources_view,
-    permission_staging_file_delete
 )
 from ..tasks import task_source_process_document
 
 __all__ = (
     'SourceBackendSelectionView', 'SourceTestView', 'SourceCreateView',
     'SourceDeleteView', 'SourceEditView', 'SourceListView',
-    'StagingFileDeleteView'
+    #'StagingFileDeleteView'
 )
 logger = logging.getLogger(name=__name__)
 
@@ -165,7 +164,7 @@ class SourceTestView(ExternalObjectMixin, ConfirmView):
             message=_('Source test queued.'), request=self.request
         )
 
-
+"""
 class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
     object_class = Source
     object_permission = permission_staging_file_delete
@@ -182,3 +181,4 @@ class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
         return self.external_object.get_file(
             encoded_filename=self.kwargs['encoded_filename']
         )
+"""

@@ -12,7 +12,6 @@ from .icons import (
     icon_document_create_multiple, icon_document_file_upload,
     icon_source_backend_selection, icon_source_test,
     icon_source_delete, icon_source_edit, icon_source_list,
-    icon_staging_file_delete
 )
 from .permissions import (
     permission_sources_create, permission_sources_delete,
@@ -111,13 +110,6 @@ link_source_test = Link(
     icon_class=icon_source_test,
     permissions=(permission_sources_view,), text=_('Test'),
     view='sources:source_test',
-)
-
-link_staging_file_delete = Link(
-    args=('source.pk', 'object.encoded_filename',), keep_query=True,
-    icon_class=icon_staging_file_delete,
-    permissions=(permission_document_file_new, permission_document_create),
-    tags='dangerous', text=_('Delete'), view='sources:staging_file_delete',
 )
 
 

@@ -11,7 +11,7 @@ from .models import Source
 
 logger = logging.getLogger(name=__name__)
 
-
+'''
 class StagingFolderFileUploadSerializer(serializers.Serializer):
     document_type = serializers.PrimaryKeyRelatedField(
         label=_('Document type'), many=False,
@@ -58,7 +58,7 @@ class StagingFolderFileSerializer(serializers.Serializer):
                 'encoded_filename': obj.encoded_filename
             }, request=self.context.get('request')
         )
-
+'''
 
 class SourceSerializer(serializers.HyperlinkedModelSerializer):
     files = serializers.SerializerMethodField()
