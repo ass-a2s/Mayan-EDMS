@@ -24,7 +24,6 @@ from mayan.apps.common.menus import (
 
 from .classes import SourceBackend, StagingFile
 from .handlers import (
-    handler_copy_transformations_to_file,
     handler_create_default_document_source,
     handler_delete_interval_source_periodic_task,
     handler_initialize_periodic_tasks
@@ -177,8 +176,4 @@ class SourcesApp(MayanAppConfig):
         signal_post_upgrade.connect(
             receiver=handler_initialize_periodic_tasks,
             dispatch_uid='sources_handler_initialize_periodic_tasks'
-        )
-        signal_post_document_file_upload.connect(
-            receiver=handler_copy_transformations_to_file,
-            dispatch_uid='sources_handler_copy_transformations_to_file'
         )

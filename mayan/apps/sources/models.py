@@ -150,6 +150,9 @@ class Source(BackendModelMixin, models.Model):
 
         with transaction.atomic():
             super().save(*args, **kwargs)
+
+            self.get_backend_instance().clean()
+
             if create:
                 self.get_backend_instance().create()
             else:

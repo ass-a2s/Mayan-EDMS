@@ -20,7 +20,7 @@ from mayan.apps.documents.tests.literals import (
 )
 from mayan.apps.metadata.models import MetadataType
 
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
+from ..source_backends.literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 
 from .literals import (
     TEST_EMAIL_ATTACHMENT_AND_INLINE, TEST_EMAIL_BASE64_FILENAME,
@@ -132,8 +132,6 @@ class EmailSourceBackendTestCase(
             }
         )
         source_backend_instance = self.test_source.get_backend_instance()
-        #source_backend_instance.kwargs['from_metadata_type_id'] = metadata_from
-        #source_backend_instance.kwargs['subject_metadata_type_id'] = metadata_subject
 
         source_backend_instance.content = TEST_EMAIL_BASE64_FILENAME
         source_backend_instance.process_documents()

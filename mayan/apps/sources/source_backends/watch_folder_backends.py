@@ -10,8 +10,8 @@ from mayan.apps.storage.models import SharedUploadedFile
 
 from ..classes import SourceBackend
 from ..exceptions import SourceException
-from ..literals import SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
+from .literals import SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 from .mixins import (
     SourceBackendCompressedMixin, SourceBackendPeriodicMixin, SourceBaseMixin
 )

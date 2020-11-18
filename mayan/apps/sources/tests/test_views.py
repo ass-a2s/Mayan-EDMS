@@ -9,23 +9,27 @@ from mayan.apps.documents.tests.literals import (
     TEST_COMPRESSED_DOCUMENT_PATH, TEST_DOCUMENT_DESCRIPTION,
     TEST_SMALL_DOCUMENT_CHECKSUM, TEST_SMALL_DOCUMENT_PATH
 )
+from mayan.apps.metadata.models import MetadataType
 from mayan.apps.testing.tests.base import GenericViewTestCase
 
-from ..literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 from ..models import Source
 from ..permissions import (
     permission_sources_create, permission_sources_delete,
     permission_sources_edit, permission_sources_view,
     permission_staging_file_delete
 )
+from ..source_backends.literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 
-from .literals import TEST_SOURCE_LABEL#, TEST_SOURCE_UNCOMPRESS_N
+from .literals import TEST_SOURCE_LABEL
 from .mixins import (
     DocumentFileUploadViewTestMixin, DocumentUploadIssueViewTestMixin,
-    DocumentUploadWizardViewTestMixin, StagingFolderTestMixin,
-    StagingFolderViewTestMixin, WebFormSourceTestMixin, SourceViewTestMixin,
-    WatchFolderTestMixin
+    DocumentUploadWizardViewTestMixin, EmailSourceBackendViewTestMixin,
+    StagingFolderTestMixin, StagingFolderViewTestMixin,
+    WebFormSourceTestMixin, SourceViewTestMixin, WatchFolderTestMixin
 )
+from .source_backends import SourceBackendTestEmail  # Import to enable backend
+
+
 
 
 '''
@@ -247,6 +251,100 @@ class DocumentFileUploadViewTestCase(
 '''
 
 
+
+class EmailSourceViewTestCase(
+    EmailSourceBackendViewTestMixin, GenericDocumentViewTestCase
+):
+    auto_upload_test_document = False
+
+    def test_email_source_create_view(self):
+        self.grant_permission(permission=permission_sources_create)
+
+        source_count = Source.objects.count()
+
+        response = self._request_test_email_source_create_view()
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(Source.objects.count(), source_count + 1)
+
+    def test_metadata_type_validation_invalid_from(self):
+        test_metadata_type = MetadataType.objects.create(
+            name='test_metadata_type'
+        )
+
+        self.grant_permission(permission=permission_sources_create)
+
+        source_count = Source.objects.count()
+
+        response = self._request_test_email_source_create_view(
+            extra_data={
+                'from_metadata_type_id': test_metadata_type.pk,
+            }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(Source.objects.count(), source_count)
+
+    def test_metadata_type_validation_valid_from(self):
+        test_metadata_type = MetadataType.objects.create(
+            name='test_metadata_type'
+        )
+
+        self.test_document_type.metadata.create(metadata_type=test_metadata_type)
+
+        self.grant_permission(permission=permission_sources_create)
+
+        source_count = Source.objects.count()
+
+        response = self._request_test_email_source_create_view(
+            extra_data={
+                'from_metadata_type_id': test_metadata_type.pk,
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(Source.objects.count(), source_count + 1)
+
+    def test_metadata_type_validation_invalid_subject(self):
+        test_metadata_type = MetadataType.objects.create(
+            name='test_metadata_type'
+        )
+
+        self.grant_permission(permission=permission_sources_create)
+
+        source_count = Source.objects.count()
+
+        response = self._request_test_email_source_create_view(
+            extra_data={
+                'subject_metadata_type_id': test_metadata_type.pk
+            }
+        )
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(Source.objects.count(), source_count)
+
+    def test_metadata_type_validation_valid_subject(self):
+        test_metadata_type = MetadataType.objects.create(
+            name='test_metadata_type'
+        )
+
+        self.test_document_type.metadata.create(metadata_type=test_metadata_type)
+
+        self.grant_permission(permission=permission_sources_create)
+
+        source_count = Source.objects.count()
+
+        response = self._request_test_email_source_create_view(
+            extra_data={
+                'subject_metadata_type_id': test_metadata_type.pk
+            }
+        )
+        self.assertEqual(response.status_code, 302)
+
+        self.assertEqual(Source.objects.count(), source_count + 1)
+
+
 class SourceViewTestCase(
     WebFormSourceTestMixin, SourceViewTestMixin, GenericViewTestCase
 ):
@@ -267,11 +365,6 @@ class SourceViewTestCase(
         self.assertEqual(response.status_code, 302)
 
         self.assertEqual(self.test_source.label, TEST_SOURCE_LABEL)
-        self.assertEqual(
-            self.test_source.get_backend_data()['uncompress'],
-            TEST_SOURCE_UNCOMPRESS_N
-        )
-
         self.assertEqual(Source.objects.count(), source_count + 1)
 
     def test_source_delete_view_no_permission(self):
@@ -406,33 +499,4 @@ class StagingFolderViewTestCase(
             staging_file_count,
             len(list(self.test_staging_folder.get_files()))
         )
-
-
-class WatchFolderErrorLoggingViewTestCase(
-    WatchFolderTestMixin, SourceViewTestMixin, GenericDocumentViewTestCase
-):
-    auto_upload_test_document = False
-
-    def test_error_logging(self):
-        self._create_test_watchfolder()
-        self.test_source = self.test_watch_folder
-        self.test_watch_folder.folder_path = 'invalid_path'
-        self.test_watch_folder.save()
-
-        self.grant_permission(permission=permission_sources_create)
-
-        self._silence_logger(name='mayan.apps.sources.tasks')
-
-        response = self._request_test_source_check_post_view()
-        self.assertEqual(response.status_code, 302)
-
-        self.assertEqual(self.test_watch_folder.error_log.count(), 1)
-
-        self.test_watch_folder.folder_path = self.temporary_directory
-        self.test_watch_folder.save()
-
-        response = self._request_test_source_check_post_view()
-        self.assertEqual(response.status_code, 302)
-
-        self.assertEqual(self.test_watch_folder.error_log.count(), 0)
 '''

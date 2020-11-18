@@ -10,14 +10,12 @@ from mayan.apps.documents.tests.literals import (
 from mayan.apps.storage.utils import fs_cleanup, mkdtemp
 
 from ..forms import NewDocumentForm
-from ..literals import (
-    SOURCE_UNCOMPRESS_CHOICE_NEVER, SOURCE_UNCOMPRESS_CHOICE_ALWAYS
-)
 from ..models import Source
 from ..source_backends.literals import (
     DEFAULT_EMAIL_IMAP_MAILBOX, DEFAULT_EMAIL_IMAP_SEARCH_CRITERIA,
     DEFAULT_EMAIL_IMAP_STORE_COMMANDS, DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
-    DEFAULT_EMAIL_POP3_TIMEOUT, DEFAULT_PERIOD_INTERVAL
+    DEFAULT_EMAIL_POP3_TIMEOUT, DEFAULT_PERIOD_INTERVAL,
+    SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_NEVER
 )
 
 from .literals import (
@@ -365,16 +363,24 @@ class SourceViewTestMixin:
             viewname='sources:source_backend_selection'
         )
 
-    def _request_test_source_create_view(self):
+    def _request_test_source_create_view(
+        self, backend_path=None, extra_data=None
+    ):
         pk_list = list(Source.objects.values_list('pk', flat=True))
+
+        data = {
+            'enabled': True,
+            'label': TEST_SOURCE_LABEL,
+            'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER
+        }
+
+        if extra_data:
+            data.update(extra_data)
 
         response = self.post(
             kwargs={
-                'backend_path': TEST_SOURCE_BACKEND_PATH
-            }, viewname='sources:source_create', data={
-                'enabled': True, 'label': TEST_SOURCE_LABEL,
-                'uncompress': SOURCE_UNCOMPRESS_CHOICE_NEVER
-            }
+                'backend_path': backend_path or TEST_SOURCE_BACKEND_PATH
+            }, viewname='sources:source_create', data=data
         )
 
         try:
@@ -418,6 +424,27 @@ class SourceViewTestMixin:
             viewname='sources:source_test', kwargs={
                 'source_id': self.test_source.pk
             }
+        )
+
+
+class EmailSourceBackendViewTestMixin(SourceViewTestMixin):
+    def _request_test_email_source_create_view(self, extra_data=None):
+        data = {
+            'document_type_id': self.test_document_type.pk,
+            'host': '127.0.0.1',
+            'interval': DEFAULT_PERIOD_INTERVAL,
+            'metadata_attachment_name': DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
+            'port': '0',
+            'ssl': True,
+            'store_body': False,
+            'username': 'username'
+        }
+
+        if extra_data:
+            data.update(extra_data)
+
+        return self._request_test_source_create_view(
+            backend_path=TEST_SOURCE_BACKEND_EMAIL_PATH, extra_data=data
         )
 
 

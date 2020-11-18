@@ -7,11 +7,11 @@ from django.utils.translation import ugettext_lazy as _
 
 from ..classes import SourceBackend
 from ..exceptions import SourceException
-from ..literals import SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 
 from .literals import (
     DEFAULT_EMAIL_IMAP_MAILBOX, DEFAULT_EMAIL_IMAP_SEARCH_CRITERIA,
-    DEFAULT_EMAIL_IMAP_STORE_COMMANDS, DEFAULT_EMAIL_POP3_TIMEOUT
+    DEFAULT_EMAIL_IMAP_STORE_COMMANDS, DEFAULT_EMAIL_POP3_TIMEOUT,
+    SOURCE_INTERVAL_UNCOMPRESS_CHOICES
 )
 from .mixins import (
     SourceBackendCompressedMixin, SourceBackendEmailMixin,

@@ -16,15 +16,13 @@ from mayan.apps.documents.tasks import task_document_file_upload
 from mayan.apps.metadata.models import MetadataType
 from mayan.apps.storage.models import SharedUploadedFile
 
-from ..literals import (
-    SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES, SOURCE_UNCOMPRESS_CHOICE_ALWAYS,
-    SOURCE_UNCOMPRESS_CHOICE_ASK
-)
 from ..tasks import task_process_document_upload
 from ..wizards import WizardStep
 
 from .literals import (
-    DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME, DEFAULT_PERIOD_INTERVAL
+    DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME, DEFAULT_PERIOD_INTERVAL,
+    SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES, SOURCE_UNCOMPRESS_CHOICE_ALWAYS,
+    SOURCE_UNCOMPRESS_CHOICE_ASK
 )
 
 logger = logging.getLogger(name=__name__)
@@ -32,6 +30,9 @@ logger = logging.getLogger(name=__name__)
 
 class SourceBaseMixin:
     def callback(self, document_file, **kwargs):
+        return
+
+    def clean(self):
         return
 
     def get_callback_kwargs(self):
@@ -67,8 +68,6 @@ class SourceBaseMixin:
     def process_document_file(self, **kwargs):
         self.process_kwargs = kwargs
 
-        self.shared_uploaded_file = self.get_shared_uploaded_file()
-
         document = self.get_document()
         user = self.get_user()
 
@@ -77,30 +76,31 @@ class SourceBaseMixin:
         else:
             user_id = None
 
-        kwargs = {
-            'action': self.get_document_file_action(),
-            'comment': self.get_document_file_comment(),
-            'document_id': document.pk,
-            'shared_uploaded_file_id': self.shared_uploaded_file.pk,
-            'user_id': user_id
-        }
+        for self.shared_uploaded_file in self.get_shared_uploaded_files() or ():
+            kwargs = {
+                'action': self.get_document_file_action(),
+                'comment': self.get_document_file_comment(),
+                'document_id': document.pk,
+                'shared_uploaded_file_id': self.shared_uploaded_file.pk,
+                'user_id': user_id
+            }
 
-        kwargs.update(self.get_task_extra_kwargs())
+            kwargs.update(self.get_task_extra_kwargs())
 
-        task_document_file_upload.apply_async(kwargs=kwargs)
+            task_document_file_upload.apply_async(kwargs=kwargs)
 
     def process_documents(self, **kwargs):
         self.process_kwargs = kwargs
 
+        document_type = self.get_document_type()
+        user = self.get_user()
+
+        if user:
+            user_id = user.pk
+        else:
+            user_id = None
+
         for self.shared_uploaded_file in self.get_shared_uploaded_files() or ():
-            document_type = self.get_document_type()
-            user = self.get_user()
-
-            if user:
-                user_id = user.pk
-            else:
-                user_id = None
-
             kwargs = {
                 'callback_kwargs': self.get_callback_kwargs(),
                 'description': self.get_document_description(),
@@ -146,7 +146,6 @@ class SourceBackendEmailMixin:
                         'min_value': 0
                     },
                     'label': _('Port'),
-                    'required': True
                 },
                 'username': {
                     'class': 'django.forms.CharField',
@@ -161,6 +160,7 @@ class SourceBackendEmailMixin:
                         'max_length': 128,
                     },
                     'label': _('Password'),
+                    'required': False,
                 },
                 'metadata_attachment_name': {
                     'class': 'django.forms.CharField',
@@ -344,38 +344,32 @@ class SourceBackendEmailMixin:
 
     def clean(self):
         document_type = self.get_document_type()
+
         form_metadata_type = self.get_from_metadata_type()
         subject_metadata_type = self.get_subject_metadata_type()
 
-        #if self.kwargs['from_metadata_type_id']:
         if form_metadata_type:
-            #if self.kwargs['from_metadata_type'].pk not in self.kwargs['document_type'].metadata.values_list('metadata_type', flat=True):
-            #if not self.get_document_type().metadata.filter(metadata_type==self.kwargs['from_metadata_type']).exist():
-            if not document_type.metadata.filter(metadata_type=form_metadata_type).exist():
+            if not document_type.metadata.filter(metadata_type=form_metadata_type).exists():
                 raise ValidationError(
                     {
                         'from_metadata_type': _(
                             '"From" metadata type "%(metadata_type)s" is not '
                             'valid for the document type: %(document_type)s'
                         ) % {
-                            #'metadata_type': self.get_from_metadata_type(),
                             'metadata_type': form_metadata_type,
                             'document_type': document_type
                         }
                     }
                 )
 
-        #if self.kwargs['subject_metadata_type_id']:
         if subject_metadata_type:
-            #if self.kwargs['subject_metadata_type_id'] not in self.get_document_type().metadata.values('metadata_type'):
-            if not document_type.metadata.filter(metadata_type=subject_metadata_type).exist():
+            if not document_type.metadata.filter(metadata_type=subject_metadata_type).exists():
                 raise ValidationError(
                     {
                         'subject_metadata_type': _(
                             'Subject metadata type "%(metadata_type)s" is not '
                             'valid for the document type: %(document_type)s'
                         ) % {
-                            #'metadata_type': self.get_subject_metadata_type(),
                             'metadata_type': subject_metadata_type,
                             'document_type': document_type
                         }
@@ -389,20 +383,16 @@ class SourceBackendEmailMixin:
         return callback_kwargs
 
     def get_from_metadata_type(self):
-        try:
-            return MetadataType.objects.get(
-                pk=self.kwargs['from_metadata_type_id']
-            )
-        except MetadataType.DoesNotExist:
-            return None
+        pk = self.kwargs['from_metadata_type_id']
+
+        if pk:
+            return MetadataType.objects.get(pk=pk)
 
     def get_subject_metadata_type(self):
-        try:
-            return MetadataType.objects.get(
-                pk=self.kwargs['subject_metadata_type_id']
-            )
-        except MetadataType.DoesNotExist:
-            return None
+        pk = self.kwargs['subject_metadata_type_id']
+
+        if pk:
+            return MetadataType.objects.get(pk=pk)
 
 
 class SourceBackendCompressedMixin:

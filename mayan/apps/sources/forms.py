@@ -110,6 +110,7 @@ class SourceBackendDynamicForm(DynamicModelForm):
                 backend_data[field_name] = backend_data[field_name].pk
 
         data['backend_data'] = json.dumps(obj=backend_data)
+
         return data
 
 
