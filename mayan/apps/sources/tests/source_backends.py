@@ -1,7 +1,3 @@
-from django.core.files.base import ContentFile
-
-from mayan.apps.storage.models import SharedUploadedFile
-
 from ..classes import SourceBackend
 from ..source_backends.mixins import (
     SourceBaseMixin, SourceBackendEmailMixin, SourceBackendPeriodicMixin

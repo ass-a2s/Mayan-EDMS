@@ -38,15 +38,14 @@ def convert_source_model(apps, schema_editor, source_backend_mapping):
     for source in Model.objects.using(alias=schema_editor.connection.alias).all():
         source.delete()
         Source.objects.create(
-            backend_path = source_backend_mapping['backend_path'], backend_data=json.dumps(
+            backend_path=source_backend_mapping['backend_path'],
+            backend_data=json.dumps(
                 obj={key: value for key, value in source.__dict__.items() if not key.startswith('_')}
             ), label=source.label, enabled=source.enabled
         )
 
 
 def operation_convert_sources(apps, schema_editor):
-    Source = apps.get_model(app_label='sources', model_name='Source')
-
     for source_backend_mapping in SOURCE_BACKEND_MAPPING_LIST:
         convert_source_model(
             apps=apps, schema_editor=schema_editor,

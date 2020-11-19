@@ -27,7 +27,3 @@ queue_sources.add_task_type(
     label=_('Handle upload'),
     dotted_path='mayan.apps.sources.tasks.task_process_document_upload'
 )
-#queue_sources.add_task_type(
-#    label=_('Upload document'),
-#    dotted_path='mayan.apps.sources.tasks.task_upload_document'
-#)

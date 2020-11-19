@@ -6,46 +6,38 @@ from urllib.parse import quote_plus, unquote_plus
 
 from furl import furl
 
-from django.apps import apps
 from django.core.files import File
 from django.core.files.base import ContentFile
 from django.conf.urls import url
-from django.template.loader import render_to_string
 from django.urls import reverse
-from django.utils import six
 from django.utils.encoding import force_text
 from django.utils.functional import cached_property
 from django.utils.translation import ugettext_lazy as _
 
-from rest_framework import serializers
-from rest_framework.reverse import reverse
-
 from mayan.apps.appearance.classes import Icon
-from mayan.apps.common.class_mixins import AppsModuleLoaderMixin
 from mayan.apps.common.menus import menu_object
 from mayan.apps.converter.classes import ConverterBase
 from mayan.apps.converter.transformations import TransformationResize
-from mayan.apps.documents.models.document_models import DocumentType
-from mayan.apps.documents.settings import (
-    setting_preview_width, setting_preview_height, setting_thumbnail_width,
-    setting_thumbnail_height
-)
 from mayan.apps.navigation.classes import Link, SourceColumn
 from mayan.apps.storage.classes import DefinedStorage
 from mayan.apps.storage.models import SharedUploadedFile
-from mayan.apps.views.generics import SingleObjectDeleteView
-from mayan.apps.views.mixins import ExternalObjectMixin
 
-from ..classes import SourceBackend
-from ..forms import StagingUploadForm
-from ..literals import STORAGE_NAME_SOURCE_CACHE_FOLDER
-from ..models import Source
-from ..permissions import permission_sources_view
+from ...classes import SourceBackend
+from ...forms import StagingUploadForm
+from ...literals import STORAGE_NAME_SOURCE_CACHE_FOLDER
+from ...permissions import permission_sources_view
 
-from .mixins import (
+from ..mixins import (
     SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
     SourceBaseMixin
 )
+
+from .api_views import (
+    APIStagingSourceFileView, APIStagingSourceFileImageView,
+    APIStagingSourceFileUploadView
+)
+from .views import StagingFileDeleteView
+from .widgets import StagingFileThumbnailWidget
 
 __all__ = ('SourceBackendStagingFolder',)
 logger = logging.getLogger(name=__name__)
@@ -201,91 +193,6 @@ class StagingFile:
         ).get_storage_instance()
 
 
-class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
-    external_object_class = Source
-    external_object_permission = permission_sources_view
-    external_object_pk_url_kwarg = 'staging_folder_id'
-
-    def get_extra_context(self):
-        return {
-            'object': self.object,
-            'object_name': _('Staging file'),
-            'title': _('Delete staging file "%s"?') % self.object,
-        }
-
-    def get_object(self):
-        return self.external_object.get_backend_instance().get_file(
-            encoded_filename=self.kwargs['encoded_filename']
-        )
-
-
-class StagingFileThumbnailWidget:
-    def render(self, instance):
-        return render_to_string(
-            template_name='documents/widgets/thumbnail.html',
-            context={
-                'container_class': 'staging-file-thumbnail-container',
-                'disable_title_link': True,
-                'gallery_name': 'sources:staging_list',
-                'instance': instance,
-                'size_preview_width': setting_preview_width.value,
-                'size_preview_height': setting_preview_height.value,
-                'size_thumbnail_width': setting_thumbnail_width.value,
-                'size_thumbnail_height': setting_thumbnail_height.value,
-            }
-        )
-
-
-
-class StagingFolderFileUploadSerializer(serializers.Serializer):
-    document_type = serializers.PrimaryKeyRelatedField(
-        label=_('Document type'), many=False,
-        queryset=DocumentType.objects.all(), read_only=False
-    )
-    expand = serializers.BooleanField(
-        default=False, label=_('Expand compressed files'), help_text=_(
-            'Upload a compressed file\'s contained files as individual '
-            'documents.'
-        )
-    )
-
-
-class StagingFolderFileSerializer(serializers.Serializer):
-    filename = serializers.CharField(max_length=255)
-    image_url = serializers.SerializerMethodField()
-    url = serializers.SerializerMethodField()
-    encoded_filename = serializers.CharField(max_length=255)
-    upload_url = serializers.SerializerMethodField()
-
-    def get_image_url(self, obj):
-        return reverse(
-            viewname='rest_api:stagingfolderfile-image',
-            kwargs={
-                'staging_folder_pk': obj.staging_folder.pk,
-                'encoded_filename': obj.encoded_filename
-            }, request=self.context.get('request')
-        )
-
-    def get_upload_url(self, obj):
-        return reverse(
-            viewname='rest_api:stagingfolderfile-upload',
-            kwargs={
-                'staging_folder_pk': obj.staging_folder.pk,
-                'encoded_filename': obj.encoded_filename,
-            }, request=self.context.get('request')
-        )
-
-    def get_url(self, obj):
-        return reverse(
-            viewname='rest_api:stagingfolderfile-detail',
-            kwargs={
-                'staging_folder_pk': obj.staging_folder.pk,
-                'encoded_filename': obj.encoded_filename
-            }, request=self.context.get('request')
-        )
-
-
-
 class SourceBackendStagingFolder(
     SourceBackendCompressedMixin, SourceBackendInteractiveMixin,
     SourceBaseMixin, SourceBackend
@@ -344,7 +251,9 @@ class SourceBackendStagingFolder(
 
     @classmethod
     def intialize(cls):
-        from ..urls import urlpatterns
+        from ...urls import urlpatterns
+
+        from mayan.apps.rest_api.urls import api_version_urls
 
         icon_staging_file_delete = Icon(driver_name='fontawesome', symbol='times')
 
@@ -377,6 +286,26 @@ class SourceBackendStagingFolder(
                 regex=r'^staging_folders/(?P<staging_folder_id>\d+)/files/(?P<encoded_filename>.+)/delete/$',
                 name='staging_file_delete', view=StagingFileDeleteView.as_view()
             ),
+        )
+
+        api_version_urls.extend(
+            [
+                url(
+                    regex=r'^staging_folders_files/(?P<staging_folder_pk>[0-9]+)/(?P<encoded_filename>.+)/image/$',
+                    name='stagingfolderfile-image',
+                    view=APIStagingSourceFileImageView.as_view()
+                ),
+                url(
+                    regex=r'^staging_folders_files/(?P<staging_folder_pk>[0-9]+)/(?P<encoded_filename>.+)/upload/$',
+                    name='stagingfolderfile-upload',
+                    view=APIStagingSourceFileUploadView.as_view()
+                ),
+                url(
+                    regex=r'^staging_folders_files/(?P<staging_folder_pk>[0-9]+)/(?P<encoded_filename>.+)/$',
+                    name='stagingfolderfile-detail',
+                    view=APIStagingSourceFileView.as_view()
+                )
+            ]
         )
 
     #TODO: Implement post upload action

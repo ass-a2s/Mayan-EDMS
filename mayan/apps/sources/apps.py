@@ -14,7 +14,6 @@ from mayan.apps.common.signals import (
 )
 from mayan.apps.converter.links import link_transformation_list
 from mayan.apps.documents.menus import menu_documents
-from mayan.apps.documents.signals import signal_post_document_file_upload
 from mayan.apps.logging.classes import ErrorLog
 from mayan.apps.navigation.classes import SourceColumn
 from mayan.apps.views.html_widgets import TwoStateWidget

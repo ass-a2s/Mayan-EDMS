@@ -177,7 +177,7 @@ from .permissions import (
 from .signals import signal_post_document_file_upload
 from .statistics import *  # NOQA
 from .widgets import (
-    ThumbnailWidget, widget_document_file_page_number,
+    BaseDocumentThumbnailWidget, widget_document_file_page_number,
     widget_document_page_number, widget_document_version_page_number
 )
 
@@ -454,7 +454,7 @@ class DocumentsApp(MayanAppConfig):
 
         # Document file and document file page thumbnail widget
         # Document version and document version page thumbnail widget
-        thumbnail_widget = ThumbnailWidget()
+        thumbnail_widget = BaseDocumentThumbnailWidget()
 
         # Document
 

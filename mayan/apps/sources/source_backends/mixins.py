@@ -116,6 +116,70 @@ class SourceBaseMixin:
             task_process_document_upload.apply_async(kwargs=kwargs)
 
 
+class SourceBackendCompressedMixin:
+    uncompress_choices = SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
+
+    @classmethod
+    def get_setup_form_schema(cls):
+        result = super().get_setup_form_schema()
+
+        result['fields'].update(
+            {
+                'uncompress': {
+                    'label': _('Uncompress'),
+                    'class': 'django.forms.ChoiceField',
+                    'default': SOURCE_UNCOMPRESS_CHOICE_ASK,
+                    'help_text': _(
+                        'Whether to expand or not compressed archives.'
+                    ), 'kwargs': {
+                        'choices': cls.uncompress_choices,
+                    }, 'required': True
+                }
+            }
+        )
+        result['field_order'] = ('uncompress',) + result['field_order']
+
+        result['widgets'].update(
+            {
+                'uncompress': {
+                    'class': 'django.forms.widgets.Select', 'kwargs': {
+                        'attrs': {'class': 'select2'},
+                    }
+                }
+            }
+        )
+        return result
+
+    @classmethod
+    def get_upload_form_class(cls):
+        class CompressedSourceUploadForm(super().get_upload_form_class()):
+            expand = forms.BooleanField(
+                label=_('Expand compressed files'), required=False,
+                help_text=ugettext(
+                    'Upload a compressed file\'s contained files as '
+                    'individual documents.'
+                )
+            )
+
+            def __init__(self, *args, **kwargs):
+                self.field_order = ['expand']
+                super().__init__(*args, **kwargs)
+
+        return CompressedSourceUploadForm
+
+    def get_expand(self):
+        if self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
+            return self.process_kwargs['forms']['source_form'].cleaned_data.get('expand')
+        else:
+            if self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ALWAYS:
+                return True
+            else:
+                return False
+
+    def get_task_extra_kwargs(self):
+        return {'expand': self.get_expand()}
+
+
 class SourceBackendEmailMixin:
     @classmethod
     def get_setup_form_schema(cls):
@@ -393,69 +457,6 @@ class SourceBackendEmailMixin:
 
         if pk:
             return MetadataType.objects.get(pk=pk)
-
-
-class SourceBackendCompressedMixin:
-    uncompress_choices = SOURCE_INTERACTIVE_UNCOMPRESS_CHOICES
-
-    @classmethod
-    def get_setup_form_schema(cls):
-        result = super().get_setup_form_schema()
-
-        result['fields'].update(
-            {
-                'uncompress': {
-                    'label': _('Uncompress'),
-                    'class': 'django.forms.ChoiceField', 'default': '',
-                    'help_text': _(
-                        'Whether to expand or not compressed archives.'
-                    ), 'kwargs': {
-                        'choices': cls.uncompress_choices,
-                    }, 'required': True
-                }
-            }
-        )
-        result['field_order'] = ('uncompress',) + result['field_order']
-
-        result['widgets'].update(
-            {
-                'uncompress': {
-                    'class': 'django.forms.widgets.Select', 'kwargs': {
-                        'attrs': {'class': 'select2'},
-                    }
-                }
-            }
-        )
-        return result
-
-    @classmethod
-    def get_upload_form_class(cls):
-        class CompressedSourceUploadForm(super().get_upload_form_class()):
-            expand = forms.BooleanField(
-                label=_('Expand compressed files'), required=False,
-                help_text=ugettext(
-                    'Upload a compressed file\'s contained files as '
-                    'individual documents.'
-                )
-            )
-
-            def __init__(self, *args, **kwargs):
-                self.field_order = ['expand']
-                super().__init__(*args, **kwargs)
-
-        return CompressedSourceUploadForm
-
-    def get_expand(self):
-        if self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ASK:
-            return self.process_kwargs['forms']['source_form'].cleaned_data.get('expand')
-        else:
-            if self.kwargs['uncompress'] == SOURCE_UNCOMPRESS_CHOICE_ALWAYS:
-                return True
-            else:
-                return False
-
-    def get_task_extra_kwargs(self):
-        return {'expand': self.get_expand()}
 
 
 class SourceBackendInteractiveMixin:

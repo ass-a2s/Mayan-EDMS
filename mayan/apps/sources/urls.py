@@ -1,27 +1,15 @@
 from django.conf.urls import url
 
-from .api_views import (
-    APIStagingSourceFileView, APIStagingSourceFileImageView,
-    APIStagingSourceFileUploadView, APISourceListView,
-    APISourceView
-)
+from .api_views import APISourceListView, APISourceView
 from .views.document_file_views import DocumentFileUploadInteractiveView
 from .views.document_views import DocumentUploadInteractiveView
 from .views.source_views import (
-    SourceBackendSelectionView, SourceCreateView,
-    SourceDeleteView, SourceEditView, SourceListView, SourceTestView,
-    #StagingFileDeleteView
+    SourceBackendSelectionView, SourceCreateView, SourceDeleteView,
+    SourceEditView, SourceListView, SourceTestView
 )
 from .wizards import DocumentCreateWizard
 
 urlpatterns = [
-    # Staging folder files
-
-    #url(
-    #    regex=r'^staging_folders/(?P<staging_folder_id>\d+)/files/(?P<encoded_filename>.+)/delete/$',
-    #    name='staging_file_delete', view=StagingFileDeleteView.as_view()
-    #),
-
     # Document create views
 
     url(
@@ -76,28 +64,9 @@ urlpatterns = [
         regex=r'^sources/(?P<source_id>\d+)/test/$',
         name='source_test', view=SourceTestView.as_view()
     ),
-    #url(
-    #    regex=r'^sources/(?P<source_id>\d+)/views/(?P<view_name>[a-zA-Z0-9_.]+)/$',
-    #    name='source_backend_view', view=SourceBackendView.as_view()
-    #),
 ]
 
 api_urls = [
-    url(
-        regex=r'^staging_folders/file/(?P<staging_folder_pk>[0-9]+)/(?P<encoded_filename>.+)/image/$',
-        name='stagingfolderfile-image',
-        view=APIStagingSourceFileImageView.as_view()
-    ),
-    url(
-        regex=r'^staging_folders/file/(?P<staging_folder_pk>[0-9]+)/(?P<encoded_filename>.+)/upload/$',
-        name='stagingfolderfile-upload',
-        view=APIStagingSourceFileUploadView.as_view()
-    ),
-    url(
-        regex=r'^staging_folders/file/(?P<staging_folder_pk>[0-9]+)/(?P<encoded_filename>.+)/$',
-        name='stagingfolderfile-detail',
-        view=APIStagingSourceFileView.as_view()
-    ),
     url(
         regex=r'^sources/$', name='source-list',
         view=APISourceListView.as_view()

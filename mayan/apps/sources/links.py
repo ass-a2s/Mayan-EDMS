@@ -69,7 +69,6 @@ def condition_source_is_not_interactive(context):
         return not getattr(source.get_backend(), 'is_interactive', False)
 
 
-
 link_document_create_multiple = Link(
     condition=condition_document_creation_access,
     icon_class=icon_document_create_multiple, text=_('New document'),
@@ -111,5 +110,3 @@ link_source_test = Link(
     permissions=(permission_sources_view,), text=_('Test'),
     view='sources:source_test',
 )
-
-

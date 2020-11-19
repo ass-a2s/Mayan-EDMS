@@ -39,13 +39,20 @@ class DocumentFilePagesCarouselWidget(CarouselWidget):
 
 
 class ThumbnailWidget:
+    container_class = '',
+    gallery_name = ''
+
+    def disable_condition(self, instance):
+        return True
+
     def render(self, instance):
         return render_to_string(
             template_name='documents/widgets/thumbnail.html',
             context={
                 # Disable the clickable link if the document is in the trash
-                'disable_title_link': instance.is_in_trash,
-                'gallery_name': 'document_list',
+                'container_class': self.container_class,
+                'disable_title_link': self.disable_condition(instance=instance),
+                'gallery_name': self.gallery_name,
                 'instance': instance,
                 'size_preview_width': setting_preview_width.value,
                 'size_preview_height': setting_preview_height.value,
@@ -53,6 +60,14 @@ class ThumbnailWidget:
                 'size_thumbnail_height': setting_thumbnail_height.value,
             }
         )
+
+
+class BaseDocumentThumbnailWidget(ThumbnailWidget):
+    container_class = '',
+    gallery_name = 'document_list'
+
+    def disable_condition(self, instance):
+        return instance.is_in_trash
 
 
 class ThumbnailFormWidget(forms.widgets.Widget):

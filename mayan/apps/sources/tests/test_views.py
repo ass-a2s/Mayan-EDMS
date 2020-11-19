@@ -15,8 +15,7 @@ from mayan.apps.testing.tests.base import GenericViewTestCase
 from ..models import Source
 from ..permissions import (
     permission_sources_create, permission_sources_delete,
-    permission_sources_edit, permission_sources_view,
-    permission_staging_file_delete
+    permission_sources_edit, permission_sources_view
 )
 from ..source_backends.literals import SOURCE_UNCOMPRESS_CHOICE_ALWAYS
 
@@ -485,7 +484,7 @@ class StagingFolderViewTestCase(
         )
 
     def test_staging_file_delete_with_permission(self):
-        self.grant_permission(permission=permission_staging_file_delete)
+        self.grant_permission(permission=permission_sources_view)
 
         staging_file_count = len(list(self.test_staging_folder.get_files()))
         staging_file = list(self.test_staging_folder.get_files())[0]

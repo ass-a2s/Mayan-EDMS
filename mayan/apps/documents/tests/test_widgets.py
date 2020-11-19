@@ -1,5 +1,5 @@
 from ..permissions import permission_document_view
-from ..widgets import ThumbnailWidget
+from ..widgets import BaseDocumentThumbnailWidget
 
 from .base import GenericDocumentTestCase, GenericDocumentViewTestCase
 from .mixins.document_mixins import DocumentViewTestMixin
@@ -7,7 +7,7 @@ from .mixins.document_mixins import DocumentViewTestMixin
 
 class DocumentFilePageWidgetTestCase(GenericDocumentTestCase):
     def test_document_list_view_document_with_no_pages(self):
-        thumbnail_widget = ThumbnailWidget()
+        thumbnail_widget = BaseDocumentThumbnailWidget()
         self.test_document.pages.all().delete()
         result = thumbnail_widget.render(instance=self.test_document)
 

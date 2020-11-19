@@ -27,7 +27,6 @@ from ..tasks import task_source_process_document
 __all__ = (
     'SourceBackendSelectionView', 'SourceTestView', 'SourceCreateView',
     'SourceDeleteView', 'SourceEditView', 'SourceListView',
-    #'StagingFileDeleteView'
 )
 logger = logging.getLogger(name=__name__)
 
@@ -163,22 +162,3 @@ class SourceTestView(ExternalObjectMixin, ConfirmView):
         messages.success(
             message=_('Source test queued.'), request=self.request
         )
-
-"""
-class StagingFileDeleteView(ExternalObjectMixin, SingleObjectDeleteView):
-    object_class = Source
-    object_permission = permission_staging_file_delete
-    pk_url_kwarg = 'staging_folder_id'
-
-    def get_extra_context(self):
-        return {
-            'object': self.object,
-            'object_name': _('Staging file'),
-            'title': _('Delete staging file "%s"?') % self.object,
-        }
-
-    def get_object(self):
-        return self.external_object.get_file(
-            encoded_filename=self.kwargs['encoded_filename']
-        )
-"""

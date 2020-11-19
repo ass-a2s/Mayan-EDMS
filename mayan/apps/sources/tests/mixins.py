@@ -11,12 +11,18 @@ from mayan.apps.storage.utils import fs_cleanup, mkdtemp
 
 from ..forms import NewDocumentForm
 from ..models import Source
+from ..source_backends.email_backends import (
+    SourceBackendIMAPEmail, SourceBackendPOP3Email
+)
 from ..source_backends.literals import (
     DEFAULT_EMAIL_IMAP_MAILBOX, DEFAULT_EMAIL_IMAP_SEARCH_CRITERIA,
     DEFAULT_EMAIL_IMAP_STORE_COMMANDS, DEFAULT_EMAIL_METADATA_ATTACHMENT_NAME,
     DEFAULT_EMAIL_POP3_TIMEOUT, DEFAULT_PERIOD_INTERVAL,
-    SOURCE_UNCOMPRESS_CHOICE_ALWAYS, SOURCE_UNCOMPRESS_CHOICE_NEVER
+    SOURCE_UNCOMPRESS_CHOICE_NEVER
 )
+from ..source_backends.staging_folder_backends import SourceBackendStagingFolder
+from ..source_backends.watch_folder_backends import SourceBackendWatchFolder
+from ..source_backends.web_form_backends import SourceBackendWebForm
 
 from .literals import (
     TEST_SOURCE_BACKEND_PATH, TEST_SOURCE_BACKEND_EMAIL_PATH,
@@ -25,13 +31,6 @@ from .literals import (
 )
 
 from .mocks import MockRequest
-
-#TODO: get path from backend class
-SOURCE_BACKEND_IMAP_EMAIL_PATH = 'mayan.apps.sources.source_backends.email_backends.SourceBackendIMAPEmail'
-SOURCE_BACKEND_POP3_EMAIL_PATH = 'mayan.apps.sources.source_backends.email_backends.SourceBackendPOP3Email'
-SOURCE_BACKEND_STAGING_FOLDER_PATH = 'mayan.apps.sources.source_backends.staging_folder_backends.SourceBackendStagingFolder'
-SOURCE_BACKEND_WATCHFOLDER_PATH = 'mayan.apps.sources.source_backends.watch_folder_backends.SourceBackendWatchFolder'
-SOURCE_BACKEND_WEB_FORM_PATH = 'mayan.apps.sources.source_backends.web_form_backends.SourceBackendWebForm'
 
 
 class DocumentFileUploadViewTestMixin:
@@ -162,7 +161,7 @@ class IMAPEmailSourceTestMixin(SourceTestMixin):
             backend_data.update(extra_data)
 
         self._create_test_source(
-            backend_path=SOURCE_BACKEND_IMAP_EMAIL_PATH,
+            backend_path=SourceBackendIMAPEmail.get_class_path(),
             backend_data=backend_data
         )
 
@@ -225,7 +224,7 @@ class POP3EmailSourceTestMixin(SourceTestMixin):
             backend_data.update(extra_data)
 
         self._create_test_source(
-            backend_path=SOURCE_BACKEND_POP3_EMAIL_PATH,
+            backend_path=SourceBackendPOP3Email.get_class_path(),
             backend_data=backend_data
         )
 
@@ -341,7 +340,7 @@ class StagingFolderTestMixin(SourceTestMixin):
             backend_data.update(extra_data)
 
         self._create_test_source(
-            backend_path=SOURCE_BACKEND_STAGING_FOLDER_PATH,
+            backend_path=SourceBackendStagingFolder.get_class_path(),
             backend_data=backend_data
         )
         self.test_staging_folders.append(self.test_source)
@@ -470,7 +469,7 @@ class WatchFolderTestMixin(SourceTestMixin):
             backend_data.update(extra_data)
 
         self._create_test_source(
-            backend_path=SOURCE_BACKEND_WATCHFOLDER_PATH,
+            backend_path=SourceBackendWatchFolder.get_class_path(),
             backend_data=backend_data
         )
 
@@ -483,6 +482,6 @@ class WebFormSourceTestMixin(SourceTestMixin):
             backend_data.update(extra_data)
 
         self._create_test_source(
-            backend_path=SOURCE_BACKEND_WEB_FORM_PATH,
+            backend_path=SourceBackendWebForm.get_class_path(),
             backend_data=backend_data
         )
