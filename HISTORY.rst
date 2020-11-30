@@ -114,3 +114,4 @@
 - Add the reusable ObjectActionAPIView API view. This is a view that can
   execute an action on an object from a queryset from a POST request.
 - Move the duplicated documents code to its own app.
+- Add duplication backend support to the duplicates app.

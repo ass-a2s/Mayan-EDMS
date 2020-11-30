@@ -17,7 +17,7 @@ urlpatterns = [
         view=DocumentDuplicatesListView.as_view()
     ),
     url(
-        regex=r'^tools/documents/duplicated/scan/$',
+        regex=r'^documents/duplicated/scan/$',
         name='duplicated_document_scan',
         view=ScanDuplicatedDocuments.as_view()
     ),

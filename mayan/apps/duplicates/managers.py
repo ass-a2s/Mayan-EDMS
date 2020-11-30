@@ -1,88 +1,93 @@
-from datetime import timedelta
 import logging
 
 from django.apps import apps
-from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import F, Max
-from django.utils.encoding import force_text
-from django.utils.timezone import now
+from django.db.models import Q, Value
 
-from mayan.apps.common.classes import ModelQueryFields
-
+from .classes import DuplicateBackend
 
 logger = logging.getLogger(name=__name__)
 
 
-class DuplicatedDocumentManager(models.Manager):
-    def clean_empty_duplicate_lists(self):
-        self.filter(documents=None).delete()
-
-    def get_duplicated_documents(self):
-        Document = apps.get_model(
-            app_label='documents', model_name='Document'
-        )
-        return Document.valid.filter(
-            pk__in=self.filter(documents__in_trash=False).values(
-                'document_id'
-            )
-        )
-
-    def get_duplicates_of(self, document):
-        Document = apps.get_model(
-            app_label='documents', model_name='Document'
-        )
-
-        try:
-            queryset = self.get(
-                document=document
-            ).documents.all()
-
-            return Document.valid.filter(
-                pk__in=queryset
-            )
-        except self.model.DoesNotExist:
-            return Document.objects.none()
-
-    def scan(self):
+class StoredDuplicateBackendManager(models.Manager):
+    def scan_all(self):
         """
-        Find duplicates by iterating over all documents and then
-        find matching latest files checksums
+        Find duplicates by iterating over all documents and all backends.
         """
         Document = apps.get_model(
             app_label='documents', model_name='Document'
         )
 
         for document in Document.valid.all():
-            self.scan_for(document=document, scan_children=False)
+            self.scan_document(document=document, scan_children=False)
 
-    def scan_for(self, document, scan_children=True):
+    def scan_document(self, document, scan_children=True):
         """
         Find duplicates by matching latest file checksums
         """
         if not document.file_latest:
             return None
 
-        Document = apps.get_model(
-            app_label='documents', model_name='Document'
+        for backend_path, backend_class in DuplicateBackend.get_all():
+            stored_backend, created = self.get_or_create(
+                backend_path=backend_path
+            )
+            duplicates = stored_backend.get_backend_instance().process(document=document)
+
+            if duplicates.exists():
+                duplicates_entry, created = stored_backend.duplicate_entries.get_or_create(
+                    document=document
+                )
+                duplicates_entry.documents.add(*duplicates)
+            else:
+                stored_backend.duplicate_entries.filter(document=document).delete()
+
+            if scan_children:
+                for document in duplicates:
+                    self.scan_document(document=document, scan_children=False)
+
+
+class DuplicateBackendEntryManager(models.Manager):
+    def clean_empty_duplicate_lists(self):
+        self.filter(documents=None).delete()
+
+    def get_duplicated_documents(self):
+        DuplicateSourceDocument = apps.get_model(
+            app_label='duplicates', model_name='DuplicateSourceDocument'
+        )
+        return DuplicateSourceDocument.valid.filter(
+            pk__in=self.all().only(
+                'document_id'
+            ).values(
+                'document_id'
+            )
         )
 
-        # Get the documents whose latest file matches the checksum
-        # of the current document and exclude the current document
+    def get_duplicates_of(self, document):
+        DuplicateTargetDocument = apps.get_model(
+            app_label='duplicates', model_name='DuplicateTargetDocument'
+        )
 
-        duplicates = Document.objects.annotate(
-            max_timestamp=Max('files__timestamp')
-        ).filter(
-            files__timestamp=F('max_timestamp'),
-            files__checksum=document.file_latest.checksum
-        ).exclude(pk=document.pk)
+        queryset = DuplicateTargetDocument.valid.none()
 
-        if duplicates.exists():
-            instance, created = self.get_or_create(document=document)
-            instance.documents.add(*duplicates)
-        else:
-            self.filter(document=document).delete()
+        when_list = []
 
-        if scan_children:
-            for document in duplicates:
-                self.scan_for(document=document, scan_children=False)
+        for entry in self.filter(document=document).all():
+            queryset = queryset | DuplicateTargetDocument.valid.filter(
+                pk__in=entry.documents.only('pk').values('pk')
+            )
+
+            when_list.append(
+                models.When(
+                    Q(pk__in=entry.documents.only('pk').values('pk')),
+                    then=Value(value=str(entry.stored_backend))
+                )
+            )
+
+        queryset = queryset.annotate(
+            backend=models.Case(
+                *when_list, output_field=models.CharField()
+            )
+        )
+
+        return queryset

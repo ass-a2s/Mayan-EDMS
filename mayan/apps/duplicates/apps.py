@@ -8,6 +8,7 @@ from mayan.apps.documents.menus import menu_documents
 from mayan.apps.documents.signals import signal_post_document_file_upload
 from mayan.apps.navigation.classes import SourceColumn
 
+from .classes import DuplicateBackend
 from .handlers import (
     handler_remove_empty_duplicates_lists, handler_scan_duplicates_for
 )
@@ -31,13 +32,23 @@ class DuplicatesApp(MayanAppConfig):
             app_label='documents', model_name='Document'
         )
 
-        DuplicatedDocument = self.get_model(model_name='DuplicatedDocument')
+        DuplicateBackendEntry = self.get_model(model_name='DuplicateBackendEntry')
+        DuplicateSourceDocument = self.get_model(model_name='DuplicateSourceDocument')
+        DuplicateTargetDocument = self.get_model(model_name='DuplicateTargetDocument')
+
+        DuplicateBackend.load_modules()
+
+        #TODO: Add permission filtering
+        SourceColumn(
+            func=lambda context: DuplicateBackendEntry.objects.filter(
+                document=context['object']
+            ).values('documents').count(), include_label=True, label=_('Duplicates'),
+            order=99, source=DuplicateSourceDocument
+        )
 
         SourceColumn(
-            func=lambda context: DuplicatedDocument.objects.get(
-                document=context['object']
-            ).documents.count(), include_label=True, label=_('Duplicates'),
-            source=Document, views=('duplicates:duplicated_document_list',)
+            attribute='backend', include_label=True, label=_('Duplicate backend'),
+            order=99, source=DuplicateTargetDocument
         )
 
         menu_documents.bind_links(
