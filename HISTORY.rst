@@ -113,11 +113,11 @@
   user interface.
 - Add the reusable ObjectActionAPIView API view. This is a view that can
   execute an action on an object from a queryset from a POST request.
-- Move the duplicated documents code to its own app.
-- Add duplication backend support to the duplicates app.
-- Add duplicates app API.
 - Improve proxy model menu link resolution. Proxy model don't need at least
   one bound link anymore to trigger resolution of all the parent model links.
   The inclusion logic is now reverse and defaults to exclusion. Menu need to
   be configured explicitly enable to proxy model link resolution using the new
   ``.add_proxy_inclusions(source)`` method.
+- Move the duplicated documents code to its own app.
+- Add duplication backend support to the duplicates app.
+- Add duplicates app API.
