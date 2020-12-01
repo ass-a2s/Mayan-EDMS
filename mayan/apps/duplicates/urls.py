@@ -1,5 +1,8 @@
 from django.conf.urls import url
 
+from .api_views import (
+    APIDocumentDuplicateListView, APIDuplicatedDocumentListView
+)
 from .views import (
     DocumentDuplicatesListView, DuplicatedDocumentListView,
     ScanDuplicatedDocuments
@@ -23,4 +26,17 @@ urlpatterns = [
     ),
 ]
 
-api_urls = []
+api_urls = [
+    url(
+        regex=r'^documents/duplicated/$',
+        name='duplicateddocument-list',
+        view=APIDuplicatedDocumentListView.as_view()
+    ),
+    url(
+        regex=r'^documents/(?P<document_id>[0-9]+)/duplicates/$',
+        name='documentduplicate-list',
+        view=APIDocumentDuplicateListView.as_view()
+    ),
+
+
+]

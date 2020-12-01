@@ -5,10 +5,10 @@ from mayan.celery import app
 
 @app.task(ignore_result=True)
 def task_duplicates_clean_empty_lists():
-    DuplicatedDocument = apps.get_model(
-        app_label='duplicates', model_name='DuplicatedDocument'
+    DuplicateBackendEntry = apps.get_model(
+        app_label='duplicates', model_name='DuplicateBackendEntry'
     )
-    DuplicatedDocument.objects.clean_empty_duplicate_lists()
+    DuplicateBackendEntry.objects.clean_empty_duplicate_lists()
 
 
 @app.task(ignore_result=True)

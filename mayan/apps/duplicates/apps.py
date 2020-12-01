@@ -21,6 +21,7 @@ from .links import (
 class DuplicatesApp(MayanAppConfig):
     app_namespace = 'duplicates'
     app_url = 'duplicates'
+    has_rest_api = True
     has_tests = True
     name = 'mayan.apps.duplicates'
     verbose_name = _('Duplicates')

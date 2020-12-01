@@ -115,3 +115,4 @@
   execute an action on an object from a queryset from a POST request.
 - Move the duplicated documents code to its own app.
 - Add duplication backend support to the duplicates app.
+- Add duplicates app API.
