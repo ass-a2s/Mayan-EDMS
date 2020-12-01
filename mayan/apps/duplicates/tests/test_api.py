@@ -5,13 +5,13 @@ from mayan.apps.documents.permissions import permission_document_view
 from mayan.apps.rest_api.tests.base import BaseAPITestCase
 
 from .mixins import (
-    DuplicatedDocumentAPIViewTestMixin, DuplicatedDocumentsTestMixin
+    DuplicatedDocumentAPIViewTestMixin, DuplicatedDocumentTestMixin
 )
 
 
-class DuplicatedDocumenAPIViewTestCase(
+class DuplicatedDocumentAPIViewTestCase(
     DocumentTestMixin, DuplicatedDocumentAPIViewTestMixin,
-    DuplicatedDocumentsTestMixin, BaseAPITestCase
+    DuplicatedDocumentTestMixin, BaseAPITestCase
 ):
     _test_event_object_name = 'test_document'
 

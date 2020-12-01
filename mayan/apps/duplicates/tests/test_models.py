@@ -2,11 +2,11 @@ from mayan.apps.documents.tests.base import GenericDocumentTestCase
 
 from ..models import DuplicateBackendEntry
 
-from .mixins import DuplicatedDocumentsTestMixin
+from .mixins import DuplicatedDocumentTestMixin
 
 
-class DuplicatedDocumentsTestCase(
-    DuplicatedDocumentsTestMixin, GenericDocumentTestCase
+class DuplicatedDocumentModelTestCase(
+    DuplicatedDocumentTestMixin, GenericDocumentTestCase
 ):
     def test_duplicates_after_delete(self):
         self._upload_duplicate_document()

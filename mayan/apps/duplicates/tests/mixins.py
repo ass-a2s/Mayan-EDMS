@@ -10,12 +10,12 @@ class DuplicatedDocumentAPIViewTestMixin:
         )
 
 
-class DuplicatedDocumentsTestMixin:
+class DuplicatedDocumentTestMixin:
     def _upload_duplicate_document(self):
         self._upload_test_document()
 
 
-class DuplicatedDocumentsViewsTestMixin:
+class DuplicatedDocumentViewTestMixin:
     def _request_test_document_duplicates_list_view(self):
         return self.get(
             viewname='duplicates:document_duplicates_list', kwargs={

@@ -2,12 +2,12 @@ from mayan.apps.documents.permissions import permission_document_view
 from mayan.apps.documents.tests.base import GenericDocumentViewTestCase
 
 from .mixins import (
-    DuplicatedDocumentsTestMixin, DuplicatedDocumentsViewsTestMixin
+    DuplicatedDocumentTestMixin, DuplicatedDocumentViewTestMixin
 )
 
 
-class DuplicatedDocumentsViewsTestCase(
-    DuplicatedDocumentsTestMixin, DuplicatedDocumentsViewsTestMixin,
+class DuplicatedDocumentViewTestCase(
+    DuplicatedDocumentTestMixin, DuplicatedDocumentViewTestMixin,
     GenericDocumentViewTestCase
 ):
     def test_document_duplicates_list_no_permission(self):
