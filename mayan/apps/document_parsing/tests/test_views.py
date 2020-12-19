@@ -22,7 +22,6 @@ class DocumentFileContentViewsTestCase(
     DocumentFileContentViewTestMixin, GenericDocumentViewTestCase
 ):
     _skip_file_descriptor_test = True
-
     # Ensure we use a PDF file
     test_document_filename = TEST_HYBRID_DOCUMENT
 
@@ -105,6 +104,7 @@ class DocumentFileContentViewsTestCase(
 
     def test_document_file_parsing_error_list_view_no_permission(self):
         response = self._request_test_document_file_parsing_error_list_view()
+
         self.assertEqual(response.status_code, 404)
 
     def test_document_file_parsing_error_list_view_with_access(self):
