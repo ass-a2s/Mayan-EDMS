@@ -226,6 +226,8 @@ job_push_python:
 .job_test_upgrade_base: &job_test_upgrade_base
   before_script:
     - set -a && . ./config.env && set +a
+    - echo "deb http://deb.debian.org/debian buster-backports main contrib non-free" >> /etc/apt/sources.list
+    - echo "deb-src http://deb.debian.org/debian buster-backports main contrib non-free" >> /etc/apt/sources.list
     - apt-get -qq update
     - apt-get install -qq curl exiftool gcc ghostscript gnupg1 libjpeg-dev libmagic1 libpng-dev libtiff-dev make poppler-utils python3-venv python3-dev tesseract-ocr
     - python3 -m venv venv
@@ -248,14 +250,6 @@ job_push_python:
     - releases/python_minor
     - releases/staging
   stage: stage_test
-
-job_test_upgrade_sqlite:
-  <<: *job_test_upgrade_base
-  script:
-    - . venv/bin/activate
-    - mayan-edms.py initialsetup --settings=mayan.settings.testing.gitlab-ci
-    - pip install dist/mayan_edms-*.whl
-    - mayan-edms.py performupgrade --settings=mayan.settings.testing.gitlab-ci
 
 job_test_upgrade_mysql:
   <<: *job_test_upgrade_base
@@ -292,6 +286,14 @@ job_test_upgrade_postgres:
     POSTGRES_DB: "mayan_edms"
     POSTGRES_PASSWORD: "postgres"
 
+job_test_upgrade_sqlite:
+  <<: *job_test_upgrade_base
+  script:
+    - . venv/bin/activate
+    - mayan-edms.py initialsetup --settings=mayan.settings.testing.gitlab-ci
+    - pip install dist/mayan_edms-*.whl
+    - mayan-edms.py performupgrade --settings=mayan.settings.testing.gitlab-ci
+
 # Run the test suit
 
 .job_test_base: &job_test_base
@@ -299,7 +301,7 @@ job_test_upgrade_postgres:
     - set -a && . ./config.env && set +a
     - echo "deb http://deb.debian.org/debian buster-backports main contrib non-free" >> /etc/apt/sources.list
     - echo "deb-src http://deb.debian.org/debian buster-backports main contrib non-free" >> /etc/apt/sources.list
-    - apt-get update
+    - apt-get -qq update
     - apt-get install --yes --no-install-recommends --target-release buster-backports -qq libreoffice-calc-nogui libreoffice-draw-nogui libreoffice-impress-nogui libreoffice-math-nogui libreoffice-writer-nogui
     - apt-get install --yes --no-install-recommends -qq curl exiftool gcc ghostscript gnupg1 graphviz libfuse2 libjpeg-dev libmagic1 libpng-dev libtiff-dev make poppler-utils python3-venv python3-dev sane-utils tesseract-ocr tesseract-ocr-deu
     - python3 -m venv venv

@@ -1,3 +1,21 @@
+3.5.5 (2021-01-05)
+==================
+- Merge improvements and fixes from the 3.4 series.
+- Improve the Single Page App AJAX content escape logic.
+  This avoids an infinite login redirect loop on some browsers.
+- Avoid self-referencing dictionaries when resolving primary key
+  URL keyword arguments.
+- Translation updates.
+- Remove CD/CI MySQL tests. MySQL does not yet support sliced subqueries.
+  This queryset paradigm is used in Mayan EDMS to avoid keeping temporary
+  lists of IDs in Python memory and allow moving all queryset computation
+  to the database layer. This is the cause of error 1235, "This version of
+  MySQL doesn't yet support 'LIMIT & IN/ALL/ANY/SOME subquery'".
+- Allow trashed documents to still display a thumbnail and accurate page
+  count.
+- Filter trashed documents from the active workflow and workflow states
+  document lists.
+
 3.5.4 (2020-12-14)
 ==================
 - Document stubs without a label will now display their ID as the label.

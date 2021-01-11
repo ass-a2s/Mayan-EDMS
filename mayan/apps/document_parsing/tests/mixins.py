@@ -50,10 +50,10 @@ class DocumentFileContentViewTestMixin:
             }
         )
 
-    def _request_test_document_parsing_submit_view(self):
+    def _request_test_document_file_parsing_submit_view(self):
         return self.post(
-            viewname='document_parsing:document_submit', kwargs={
-                'document_id': self.test_document.pk
+            viewname='document_parsing:document_file_submit', kwargs={
+                'document_file_id': self.test_document_file.pk
             }
         )
 

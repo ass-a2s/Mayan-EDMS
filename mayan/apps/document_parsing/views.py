@@ -107,9 +107,9 @@ class DocumentFilePageContentView(SingleObjectDetailView):
         }
 
     def get_source_queryset(self):
-        document_queryset = Document.valid.all()
-        return DocumentPage.objects.filter(
-            document_version__document_id__in=document_queryset.values('pk')
+        document_file_queryset = DocumentFile.valid.all()
+        return DocumentFilePage.objects.filter(
+            document_file_id__in=document_file_queryset.values('pk')
         )
 
 
