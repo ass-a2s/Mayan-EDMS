@@ -7,7 +7,8 @@ from .mixins import (
 
 
 class DocumentsDuplicatesViewsTestCase(
-    DuplicatedDocumentsViewsTestMixin, GenericDocumentViewTestCase
+    DuplicatedDocumentsTestMixin, DuplicatedDocumentsViewsTestMixin,
+    GenericDocumentViewTestCase
 ):
     def test_document_duplicates_list_no_permission(self):
         self._upload_duplicate_document()
@@ -22,7 +23,7 @@ class DocumentsDuplicatesViewsTestCase(
             permission=permission_document_view
         )
 
-        response = self._request_document_duplicates_list_view()
+        response = self._request_test_document_duplicates_list_view()
         self.assertNotContains(
             response=response, status_code=200,
             text=self.test_documents[1].label
@@ -36,7 +37,7 @@ class DocumentsDuplicatesViewsTestCase(
             permission=permission_document_view
         )
 
-        response = self._request_document_duplicates_list_view()
+        response = self._request_test_document_duplicates_list_view()
         self.assertEqual(response.status_code, 404)
 
     def test_document_duplicates_list_with_full_access(self):
@@ -69,7 +70,7 @@ class DocumentsDuplicatesViewsTestCase(
 
         self.test_documents[0].delete()
 
-        response = self._request_document_duplicates_list_view()
+        response = self._request_test_document_duplicates_list_view()
         self.assertEqual(response.status_code, 404)
 
     def test_document_duplicates_list_trashed_target_with_full_access(self):
@@ -99,7 +100,7 @@ class DuplicatedDocumentsViewsTestCase(
     def test_duplicated_document_list_no_permission(self):
         self._upload_duplicate_document()
 
-        response = self._request_duplicated_document_list_view()
+        response = self._request_test_duplicated_document_list_view()
         self.assertNotContains(
             response=response, status_code=200,
             text=self.test_documents[0].label
@@ -130,7 +131,7 @@ class DuplicatedDocumentsViewsTestCase(
             permission=permission_document_view
         )
 
-        response = self._request_duplicated_document_list_view()
+        response = self._request_test_duplicated_document_list_view()
         self.assertNotContains(
             response=response, status_code=200,
             text=self.test_documents[0].label
@@ -174,7 +175,7 @@ class DuplicatedDocumentsViewsTestCase(
 
         self.test_documents[0].delete()
 
-        response = self._request_duplicated_document_list_view()
+        response = self._request_test_duplicated_document_list_view()
         self.assertNotContains(
             response=response, status_code=200,
             text=self.test_documents[0].label

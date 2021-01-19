@@ -5,6 +5,7 @@ from django.utils.translation import ugettext_lazy as _
 from mayan.apps.common.apps import MayanAppConfig
 from mayan.apps.common.menus import menu_facet, menu_tools
 from mayan.apps.documents.menus import menu_documents
+from mayan.apps.documents.permissions import permission_document_view
 from mayan.apps.documents.signals import signal_post_document_file_upload
 from mayan.apps.navigation.classes import SourceColumn
 

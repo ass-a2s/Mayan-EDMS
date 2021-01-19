@@ -4,6 +4,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.translation import ugettext_lazy as _, ungettext
 
 from mayan.apps.documents.forms.document_type_forms import DocumentTypeFilteredSelectForm
+from mayan.apps.documents.models.document_models import Document
 from mayan.apps.documents.models.document_type_models import DocumentType
 from mayan.apps.documents.models.document_version_models import DocumentVersion
 from mayan.apps.documents.models.document_version_page_models import DocumentVersionPage

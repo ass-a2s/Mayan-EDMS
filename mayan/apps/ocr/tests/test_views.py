@@ -2,8 +2,8 @@ from mayan.apps.documents.tests.base import GenericDocumentViewTestCase
 
 from ..models import DocumentVersionPageOCRContent
 from ..permissions import (
-    permission_document_version_ocr_content_view, permission_document_version_ocr,
-    permission_document_type_ocr_setup
+    permission_document_version_ocr_content_view,
+    permission_document_version_ocr, permission_document_type_ocr_setup
 )
 from ..utils import get_instance_ocr_content
 
@@ -27,23 +27,26 @@ class DocumentOCRViewsTestCase(
     def test_document_content_view_with_access(self):
         self.test_document.submit_for_ocr()
         self.grant_access(
-            obj=self.test_document, permission=permission_document_version_ocr_content_view
+            obj=self.test_document,
+            permission=permission_document_version_ocr_content_view
         )
 
         response = self._request_test_document_version_ocr_content_view()
         self.assertContains(
-            response=response, text=TEST_DOCUMENT_VERSION_OCR_CONTENT, status_code=200
+            response=response, text=TEST_DOCUMENT_VERSION_OCR_CONTENT,
+            status_code=200
         )
 
     def test_trashed_document_content_view_with_access(self):
         self.test_document.submit_for_ocr()
         self.grant_access(
-            obj=self.test_document, permission=permission_ocr_content_view
+            obj=self.test_document,
+            permission=permission_document_version_ocr_content_view
         )
 
         self.test_document.delete()
 
-        response = self._request_document_content_view()
+        response = self._request_test_document_version_ocr_content_view()
         self.assertEqual(response.status_code, 404)
 
     def test_document_content_delete_view_no_permission(self):
@@ -81,12 +84,12 @@ class DocumentOCRViewsTestCase(
 
         self.test_document.delete()
 
-        response = self._request_document_content_delete_view()
+        response = self._request_test_document_version_ocr_content_delete_view()
         self.assertEqual(response.status_code, 404)
 
         self.assertTrue(
-            DocumentPageOCRContent.objects.filter(
-                document_page=self.test_document.pages.first()
+            DocumentVersionPageOCRContent.objects.filter(
+                document_version_page=self.test_document_version.pages.first()
             ).exists()
         )
 
@@ -99,23 +102,26 @@ class DocumentOCRViewsTestCase(
     def test_document_page_content_view_with_access(self):
         self.test_document.submit_for_ocr()
         self.grant_access(
-            obj=self.test_document, permission=permission_document_version_ocr_content_view
+            obj=self.test_document,
+            permission=permission_document_version_ocr_content_view
         )
 
         response = self._request_test_document_version_page_ocr_content_view()
         self.assertContains(
-            response=response, text=TEST_DOCUMENT_VERSION_OCR_CONTENT, status_code=200
+            response=response, text=TEST_DOCUMENT_VERSION_OCR_CONTENT,
+            status_code=200
         )
 
     def test_trashed_document_page_content_view_with_access(self):
         self.test_document.submit_for_ocr()
         self.grant_access(
-            obj=self.test_document, permission=permission_ocr_content_view
+            obj=self.test_document,
+            permission=permission_document_version_ocr_content_view
         )
 
         self.test_document.delete()
 
-        response = self._request_document_page_content_view()
+        response = self._request_test_document_version_page_ocr_content_view()
         self.assertEqual(response.status_code, 404)
 
     def test_document_submit_view_no_permission(self):
@@ -150,7 +156,7 @@ class DocumentOCRViewsTestCase(
         self.assertEqual(response.status_code, 404)
 
         self.assertFalse(
-            TEST_DOCUMENT_CONTENT in ''.join(
+            TEST_DOCUMENT_VERSION_OCR_CONTENT in ''.join(
                 self.test_document_version.ocr_content()
             )
         )

@@ -76,7 +76,7 @@ class FavoriteDocumentsTestCase(
 
         self.test_document.delete()
 
-        response = self._request_document_list_favorites()
+        response = self._request_test_document_favorites_list_view()
         self.assertNotContains(
             response=response, text=self.test_document.label, status_code=200
         )
@@ -117,7 +117,7 @@ class FavoriteDocumentsTestCase(
 
         self.test_document.delete()
 
-        response = self._request_test_document_favorite_remove()
+        response = self._request_test_document_favorite_remove_view()
         self.assertEqual(response.status_code, 404)
 
         self.assertEqual(

@@ -3,15 +3,19 @@ from mayan.apps.testing.tests.base import GenericViewTestCase
 
 from ..events import event_workflow_edited
 from ..models import WorkflowTransition
-from ..permissions import permission_workflow_edit, permission_workflow_view
+from ..permissions import (
+    permission_workflow_edit, permission_workflow_transition,
+    permission_workflow_view
+)
 
 from .literals import (
     TEST_WORKFLOW_TRANSITION_LABEL, TEST_WORKFLOW_TRANSITION_LABEL_EDITED
 )
 from .mixins import (
-    WorkflowTestMixin, WorkflowTransitionEventViewTestMixin,
-    WorkflowTransitionFieldTestMixin, WorkflowTransitionFieldViewTestMixin,
-    WorkflowTransitionViewTestMixin, WorkflowViewTestMixin
+    WorkflowInstanceViewTestMixin, WorkflowTestMixin,
+    WorkflowTransitionEventViewTestMixin, WorkflowTransitionFieldTestMixin,
+    WorkflowTransitionFieldViewTestMixin, WorkflowTransitionViewTestMixin,
+    WorkflowViewTestMixin
 )
 
 
@@ -108,7 +112,8 @@ class WorkflowTransitionViewTestCase(
 
         self.test_workflow_transition.refresh_from_db()
         self.assertEqual(
-            self.test_workflow_transition.label, TEST_WORKFLOW_TRANSITION_LABEL
+            self.test_workflow_transition.label,
+            TEST_WORKFLOW_TRANSITION_LABEL
         )
         event = self._get_test_object_event()
         self.assertEqual(event, None)
@@ -169,8 +174,8 @@ class WorkflowTransitionViewTestCase(
 
 
 class WorkflowTransitionEventViewTestCase(
-    WorkflowTestMixin, WorkflowTransitionEventViewTestMixin,
-    GenericDocumentViewTestCase
+    WorkflowInstanceViewTestMixin, WorkflowTestMixin,
+    WorkflowTransitionEventViewTestMixin, GenericDocumentViewTestCase
 ):
     auto_upload_test_document = False
 
@@ -187,7 +192,7 @@ class WorkflowTransitionEventViewTestCase(
         self.grant_access(
             obj=self.test_workflow, permission=permission_workflow_transition
         )
-        response = self._request_test_workflow_transition_selection_get_view()
+        response = self._request_test_workflow_instance_transition_selection_get_view()
         self.assertEqual(response.status_code, 200)
 
         self.assertEqual(
@@ -199,7 +204,7 @@ class WorkflowTransitionEventViewTestCase(
         self.grant_access(
             obj=self.test_workflow, permission=permission_workflow_transition
         )
-        response = self._request_test_workflow_transition_selection_post_view()
+        response = self._request_test_workflow_instance_transition_selection_post_view()
         self.assertEqual(response.status_code, 302)
 
         self.assertEqual(
@@ -232,10 +237,10 @@ class WorkflowTransitionEventViewTestCase(
         Test transitioning a workflow without the transition workflow
         permission.
         """
-        response = self._request_test_workflow_transition_execute_view()
+        response = self._request_test_workflow_instance_transition_execute_view()
         self.assertEqual(response.status_code, 404)
 
-        # Workflow should remain in the same initial state
+        # Workflow should remain in the same initial state.
         self.assertEqual(
             self.test_workflow_instance.get_current_state(),
             self.test_workflow_state_1
@@ -250,7 +255,7 @@ class WorkflowTransitionEventViewTestCase(
             obj=self.test_workflow, permission=permission_workflow_transition
         )
 
-        response = self._request_test_workflow_transition_execute_view()
+        response = self._request_test_workflow_instance_transition_execute_view()
         self.assertEqual(response.status_code, 302)
 
         self.assertEqual(
@@ -268,7 +273,7 @@ class WorkflowTransitionEventViewTestCase(
             permission=permission_workflow_transition
         )
 
-        response = self._request_test_workflow_transition_execute_view()
+        response = self._request_test_workflow_instance_transition_execute_view()
         self.assertEqual(response.status_code, 302)
 
         self.assertEqual(
