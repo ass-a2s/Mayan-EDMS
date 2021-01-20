@@ -237,8 +237,7 @@ class RecentlyCreatedDocumentManager(models.Manager):
 
         queryset = ModelQueryFields.get(
             model=RecentlyCreatedDocument
-        ).get_queryset()
-        #manager_name='valid'
+        ).get_queryset(manager_name='valid')
 
         return queryset.filter(
             pk__in=queryset.order_by('-datetime_created')[

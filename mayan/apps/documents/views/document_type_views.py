@@ -125,9 +125,9 @@ class DocumentTypeEditView(SingleObjectEditView):
             'title': _('Edit document type: %s') % self.object,
         }
 
-    def get_save_extra_data(self):
+    def get_instance_extra_data(self):
         return {
-            '_user': self.request.user,
+            '_event_actor': self.request.user,
         }
 
 
@@ -149,9 +149,9 @@ class DocumentTypeDeletionPoliciesEditView(SingleObjectEditView):
             ) % self.object,
         }
 
-    def get_save_extra_data(self):
+    def get_instance_extra_data(self):
         return {
-            '_user': self.request.user,
+            '_event_actor': self.request.user,
         }
 
 
@@ -281,7 +281,7 @@ class DocumentTypeFileGeneratorEditView(SingleObjectEditView):
             ) % self.object,
         }
 
-    def get_save_extra_data(self):
+    def get_instance_extra_data(self):
         return {
-            '_user': self.request.user,
+            '_event_actor': self.request.user,
         }

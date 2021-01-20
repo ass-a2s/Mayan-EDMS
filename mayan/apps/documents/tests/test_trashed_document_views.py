@@ -99,7 +99,7 @@ class DocumentTrashViewTestCase(
         trashed_document_count = TrashedDocument.objects.count()
 
         response = self._request_test_document_trash_post_view()
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(Document.valid.count(), document_count)
         self.assertEqual(
