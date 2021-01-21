@@ -71,6 +71,7 @@ class DocumentFileDownloadView(SingleObjectDownloadView):
 
     def get_download_file_object(self):
         instance = self.get_object()
+        instance._event_action_object = instance.document
         instance._event_actor = self.request.user
         return instance.get_download_file_object()
 

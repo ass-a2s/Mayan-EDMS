@@ -21,6 +21,7 @@ class DocumentFilePageViewTestCase(
         self.assertEqual(self.test_document_file.pages.count(), page_count)
 
     def test_document_file_page_count_update_view_with_access(self):
+        self.test_document_file.pages.all().delete()
         page_count = self.test_document_file.pages.count()
 
         self.grant_access(
@@ -43,7 +44,7 @@ class DocumentFilePageViewTestCase(
         self.test_document.delete()
 
         response = self._request_test_document_file_page_count_update_view()
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(self.test_document_file.pages.count(), page_count)
 
@@ -68,7 +69,7 @@ class DocumentFilePageViewTestCase(
         response = self._request_test_document_file_multiple_page_count_update_view()
         self.assertEqual(response.status_code, 302)
 
-        self.assertEqual(self.test_document_file.pages.count(), page_count)
+        self.assertNotEqual(self.test_document_file.pages.count(), page_count)
 
     def test_trashed_document_file_multiple_page_count_update_view_with_access(self):
         self.test_document_file.pages.all().delete()
@@ -82,7 +83,7 @@ class DocumentFilePageViewTestCase(
         self.test_document.delete()
 
         response = self._request_test_document_file_multiple_page_count_update_view()
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(self.test_document_file.pages.count(), page_count)
 
@@ -110,10 +111,6 @@ class DocumentFilePageViewTestCase(
 
         response = self._request_test_document_file_page_list_view()
         self.assertEqual(response.status_code, 404)
-        #self.assertNotContains(
-        #    response=response, status_code=404,
-        #    text=str(self.test_document_file)
-        #)
 
     def test_document_file_page_rotate_left_view_no_permission(self):
         response = self._request_test_document_file_page_rotate_left_view()
@@ -157,7 +154,7 @@ class DocumentFilePageViewTestCase(
         self.test_document.delete()
 
         response = self._request_test_document_file_page_rotate_right_view()
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 404)
 
     def test_document_file_page_view_no_permission(self):
         response = self._request_test_document_file_page_view(
@@ -190,12 +187,6 @@ class DocumentFilePageViewTestCase(
             document_file_page=self.test_document_file.pages.first()
         )
         self.assertEqual(response.status_code, 404)
-
-        #self.assertContains(
-        #    response=response, status_code=404, text=force_text(
-        #        s=self.test_document_file.pages.first()
-        #    )
-        #)
 
     def test_document_file_page_zoom_in_view_no_permission(self):
         response = self._request_test_document_file_page_zoom_in_view()
