@@ -2,15 +2,12 @@ import logging
 
 from django.contrib import messages
 from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404
 from django.template import RequestContext
 from django.urls import reverse
 from django.utils.encoding import force_text
 from django.utils.translation import ugettext_lazy as _
 
-from mayan.apps.acls.models import AccessControlList
 from mayan.apps.django_gpg.exceptions import NeedPassphrase, PassphraseError
-from mayan.apps.django_gpg.permissions import permission_key_sign
 from mayan.apps.documents.models.document_file_models import DocumentFile
 from mayan.apps.views.generics import (
     ConfirmView, FormView, SingleObjectCreateView, SingleObjectDeleteView,
@@ -47,20 +44,19 @@ from .tasks import task_verify_missing_embedded_signature
 logger = logging.getLogger(name=__name__)
 
 
-class DocumentFileDetachedSignatureCreateView(FormView):
+class DocumentFileDetachedSignatureCreateView(ExternalObjectMixin, FormView):
+    external_object_permission = permission_document_file_sign_detached
+    external_object_pk_url_kwarg = 'document_file_id'
+    external_object_queryset = DocumentFile.valid
     form_class = DocumentFileSignatureCreateForm
 
     def form_valid(self, form):
         key = form.cleaned_data['key']
         passphrase = form.cleaned_data['passphrase'] or None
 
-        AccessControlList.objects.check_access(
-            obj=key, permissions=(permission_key_sign,), user=self.request.user
-        )
-
         try:
             DetachedSignature.objects.sign_document_file(
-                document_file=self.document_file,
+                document_file=self.external_object,
                 key=key, passphrase=passphrase, user=self.request.user
             )
         except NeedPassphrase:
@@ -72,7 +68,7 @@ class DocumentFileDetachedSignatureCreateView(FormView):
                 redirect_to=reverse(
                     viewname='signatures:document_file_signature_detached_create',
                     kwargs={
-                        'document_file_id': self.document_file.pk
+                        'document_file_id': self.external_object.pk
                     }
                 )
             )
@@ -85,7 +81,7 @@ class DocumentFileDetachedSignatureCreateView(FormView):
                 redirect_to=reverse(
                     viewname='signatures:document_file_signature_detached_create',
                     kwargs={
-                        'document_file_id': self.document_file.pk
+                        'document_file_id': self.external_object.pk
                     }
                 )
             )
@@ -97,31 +93,14 @@ class DocumentFileDetachedSignatureCreateView(FormView):
 
         return super().form_valid(form)
 
-    def dispatch(self, request, *args, **kwargs):
-        self.document_file = self.get_document_file()
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_document_file(self):
-        return get_object_or_404(
-            klass=DocumentFile.valid, pk=self.kwargs['document_file_id']
-        )
-
-        AccessControlList.objects.check_access(
-            obj=document_version,
-            permissions=(permission_document_version_sign_detached,),
-            user=self.request.user
-        )
-        return document_version
-
     def get_extra_context(self):
         return {
-            'object': self.document_file,
+            'object': self.external_object,
             'submit_icon': icon_document_file_signature_detached_create,
             'submit_label': _('Sign'),
             'title': _(
                 'Sign document file "%s" with a detached signature'
-            ) % self.document_file,
+            ) % self.external_object,
         }
 
     def get_form_extra_kwargs(self):
@@ -130,24 +109,23 @@ class DocumentFileDetachedSignatureCreateView(FormView):
     def get_post_action_redirect(self):
         return reverse(
             viewname='signatures:document_file_signature_list',
-            kwargs={'document_file_id': self.document_file.pk}
+            kwargs={'document_file_id': self.external_object.pk}
         )
 
 
-class DocumentFileEmbeddedSignatureCreateView(FormView):
+class DocumentFileEmbeddedSignatureCreateView(ExternalObjectMixin, FormView):
+    external_object_permission = permission_document_file_sign_embedded
+    external_object_pk_url_kwarg = 'document_file_id'
+    external_object_queryset = DocumentFile.valid
     form_class = DocumentFileSignatureCreateForm
 
     def form_valid(self, form):
         key = form.cleaned_data['key']
         passphrase = form.cleaned_data['passphrase'] or None
 
-        AccessControlList.objects.check_access(
-            obj=key, permissions=(permission_key_sign,), user=self.request.user
-        )
-
         try:
             signature = EmbeddedSignature.objects.sign_document_file(
-                document_file=self.document_file,
+                document_file=self.external_object,
                 key=key, passphrase=passphrase, user=self.request.user
             )
         except NeedPassphrase:
@@ -159,7 +137,7 @@ class DocumentFileEmbeddedSignatureCreateView(FormView):
                 redirect_to=reverse(
                     viewname='signatures:document_file_signature_embedded_create',
                     kwargs={
-                        'document_file_id': self.document_file.pk
+                        'document_file_id': self.external_object.pk
                     }
                 )
             )
@@ -172,7 +150,7 @@ class DocumentFileEmbeddedSignatureCreateView(FormView):
                 redirect_to=reverse(
                     viewname='signatures:document_file_signature_embedded_create',
                     kwargs={
-                        'document_file_id': self.document_file.pk
+                        'document_file_id': self.external_object.pk
                     }
                 )
             )
@@ -191,24 +169,14 @@ class DocumentFileEmbeddedSignatureCreateView(FormView):
 
         return super().form_valid(form)
 
-    def dispatch(self, request, *args, **kwargs):
-        self.document_file = self.get_document_file()
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_document_file(self):
-        return get_object_or_404(
-            klass=DocumentFile, pk=self.kwargs['document_file_id']
-        )
-
     def get_extra_context(self):
         return {
-            'object': self.document_file,
+            'object': self.external_object,
             'submit_icon': icon_document_file_signature_embedded_create,
             'submit_label': _('Sign'),
             'title': _(
                 'Sign document file "%s" with a embedded signature'
-            ) % self.document_file,
+            ) % self.external_object,
         }
 
     def get_form_extra_kwargs(self):
@@ -336,42 +304,30 @@ class DocumentFileSignatureListView(
         return self.external_object.signatures.all()
 
 
-class DocumentFileSignatureUploadView(SingleObjectCreateView):
+class DocumentFileSignatureUploadView(
+    ExternalObjectMixin, SingleObjectCreateView
+):
+    external_object_permission = permission_document_file_signature_upload
+    external_object_pk_url_kwarg = 'document_file_id'
+    external_object_queryset = DocumentFile.valid
     fields = ('signature_file',)
     model = DetachedSignature
 
-    def dispatch(self, request, *args, **kwargs):
-        self.document_file = self.get_document_file()
-
-        return super().dispatch(request, *args, **kwargs)
-
-    def get_document_file(self):
-        document_version = get_object_or_404(
-            klass=DocumentFile.valid, pk=self.kwargs['document_file_id']
-        )
-
-        AccessControlList.objects.check_access(
-            obj=document_version,
-            permissions=(permission_document_file_signature_upload,),
-            user=self.request.user
-        )
-        return document_version
-
     def get_extra_context(self):
         return {
-            'object': self.document_file,
+            'object': self.external_object,
             'title': _(
                 'Upload detached signature for document file: %s'
-            ) % self.document_file,
+            ) % self.external_object,
         }
 
     def get_instance_extra_data(self):
-        return {'document_file': self.document_file}
+        return {'document_file': self.external_object}
 
     def get_post_action_redirect(self):
         return reverse(
             viewname='signatures:document_file_signature_list', kwargs={
-                'document_file_id': self.document_file.pk
+                'document_file_id': self.external_object.pk
             }
         )
 

@@ -306,7 +306,7 @@ class DetachedSignaturesViewTestCase(
         signature_count = self.test_document.file_latest.signatures.count()
 
         response = self._request_test_document_file_signature_create_view()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(
             self.test_document.file_latest.signatures.count(),
@@ -346,7 +346,7 @@ class DetachedSignaturesViewTestCase(
         )
 
         response = self._request_test_document_file_signature_create_view()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(
             self.test_document.file_latest.signatures.count(),
@@ -456,7 +456,7 @@ class DetachedSignaturesViewTestCase(
         self._upload_test_document()
 
         response = self._request_test_document_file_signature_upload_view()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(DetachedSignature.objects.count(), signature_count)
 
@@ -510,7 +510,7 @@ class EmbeddedSignaturesViewTestCase(
         signature_count = self.test_document.file_latest.signatures.count()
 
         response = self._request_test_document_file_signature_create_view()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(
             self.test_document.file_latest.signatures.count(),
@@ -550,7 +550,7 @@ class EmbeddedSignaturesViewTestCase(
         )
 
         response = self._request_test_document_file_signature_create_view()
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 404)
 
         self.assertEqual(
             self.test_document.file_latest.signatures.count(),
