@@ -20,9 +20,9 @@ from .forms import (
     DocumentFileSignatureDetailForm
 )
 from .icons import (
-    icon_document_signature_list,
     icon_document_file_signature_detached_create,
-    icon_document_file_signature_embedded_create
+    icon_document_file_signature_embedded_create,
+    icon_document_file_signature_list
 )
 from .links import (
     link_document_file_signature_detached_create,
@@ -261,7 +261,7 @@ class DocumentFileSignatureListView(
     def get_extra_context(self):
         return {
             'hide_object': True,
-            'no_results_icon': icon_document_signature_list,
+            'no_results_icon': icon_document_file_signature_list,
             'no_results_text': _(
                 'Signatures help provide authorship evidence and tamper '
                 'detection. They are very secure and hard to '
