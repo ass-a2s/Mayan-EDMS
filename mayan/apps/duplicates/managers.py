@@ -4,6 +4,8 @@ from django.apps import apps
 from django.db import models
 from django.db.models import Q, Value
 
+from mayan.apps.acls.models import AccessControlList
+
 from .classes import DuplicateBackend
 
 logger = logging.getLogger(name=__name__)
@@ -51,19 +53,29 @@ class DuplicateBackendEntryManager(models.Manager):
     def clean_empty_duplicate_lists(self):
         self.filter(documents=None).delete()
 
-    def get_duplicated_documents(self):
+    def get_duplicated_documents(self, permission=None, user=None):
         DuplicateSourceDocument = apps.get_model(
             app_label='duplicates', model_name='DuplicateSourceDocument'
         )
-        return DuplicateSourceDocument.valid.filter(
-            pk__in=self.all().only(
-                'document_id'
-            ).values(
-                'document_id'
-            )
+        DuplicateTargetDocument = apps.get_model(
+            app_label='duplicates', model_name='DuplicateTargetDocument'
         )
 
-    def get_duplicates_of(self, document):
+        target_document_queryset = DuplicateTargetDocument.valid.all()
+
+        if permission:
+            target_document_queryset = AccessControlList.objects.restrict_queryset(
+                queryset=target_document_queryset, permission=permission,
+                user=user
+            )
+
+        queryset = self.filter(documents__in=target_document_queryset).only(
+            'document_id'
+        ).values('document_id')
+
+        return DuplicateSourceDocument.valid.filter(pk__in=queryset)
+
+    def get_duplicates_of(self, document, permission=None, user=None):
         DuplicateTargetDocument = apps.get_model(
             app_label='duplicates', model_name='DuplicateTargetDocument'
         )
@@ -89,5 +101,10 @@ class DuplicateBackendEntryManager(models.Manager):
                 *when_list, output_field=models.CharField()
             )
         )
+
+        if permission:
+            queryset = AccessControlList.objects.restrict_queryset(
+                permission=permission, queryset=queryset, user=user
+            )
 
         return queryset

@@ -7,6 +7,7 @@ from mayan.apps.common.menus import (
     menu_facet, menu_multi_item, menu_tools
 )
 from mayan.apps.documents.menus import menu_documents
+from mayan.apps.documents.permissions import permission_document_view
 from mayan.apps.documents.signals import signal_post_document_file_upload
 from mayan.apps.navigation.classes import SourceColumn
 
@@ -47,12 +48,13 @@ class DuplicatesApp(MayanAppConfig):
 
         DuplicateBackend.load_modules()
 
-        #TODO: Add permission filtering
         SourceColumn(
-            func=lambda context: DuplicateBackendEntry.objects.filter(
-                document=context['object']
-            ).values('documents').count(), include_label=True,
-            label=_('Duplicates'), order=99, source=DuplicateSourceDocument
+            func=lambda context: DuplicateBackendEntry.objects.get_duplicates_of(
+                document=context['object'],
+                permission=permission_document_view,
+                user=context['request'].user
+            ).count(), include_label=True, label=_('Duplicates'),
+            order=99, source=DuplicateSourceDocument
         )
 
         SourceColumn(

@@ -39,10 +39,6 @@ class DuplicateBackendEntry(models.Model):
     documents = models.ManyToManyField(
         to=Document, verbose_name=_('Duplicated documents')
     )
-    #TODO:Remove field
-    datetime_added = models.DateTimeField(
-        auto_now_add=True, db_index=True, verbose_name=_('Added')
-    )
 
     objects = DuplicateBackendEntryManager()
 

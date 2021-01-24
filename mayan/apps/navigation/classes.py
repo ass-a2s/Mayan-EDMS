@@ -15,7 +15,6 @@ from django.template import RequestContext, Variable, VariableDoesNotExist
 from django.template.defaulttags import URLNode
 from django.urls import resolve, reverse
 from django.utils.encoding import force_str, force_text
-from django.utils.module_loading import import_string
 from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.common.settings import setting_home_view
@@ -624,12 +623,9 @@ class SourceColumn:
             # Might be an instance, try its class
             columns.extend(cls._registry[source.__class__])
         except KeyError:
-            try:
-                # Might be a subclass, try its root class
-                columns.extend(cls._registry[source.__class__.__mro__[-2]])
-            except KeyError:
-                pass
-
+            # Might be a subclass, try its root class
+            for parent_class in source.__class__.__mro__[1:-1]:
+                columns.extend(cls._registry.get(parent_class, ()))
         try:
             # Might be an inherited class instance, try its source class
             columns.extend(cls._registry[source.source_ptr.__class__])

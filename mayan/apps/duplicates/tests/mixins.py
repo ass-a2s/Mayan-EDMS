@@ -12,7 +12,7 @@ class DuplicatedDocumentAPIViewTestMixin:
 
 class DuplicatedDocumentTestMixin:
     def _upload_duplicate_document(self):
-        self._upload_test_document()
+        self._upload_test_document(label='duplicated document label')
 
 
 class DuplicatedDocumentViewTestMixin:

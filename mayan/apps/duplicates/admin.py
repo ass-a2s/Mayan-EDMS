@@ -5,9 +5,7 @@ from .models import DuplicateBackendEntry, StoredDuplicateBackend
 
 @admin.register(DuplicateBackendEntry)
 class DuplicateBackendEntryAdmin(admin.ModelAdmin):
-    list_display = (
-        'document', 'datetime_added'
-    )
+    list_display = ('document',)
 
 
 @admin.register(StoredDuplicateBackend)
