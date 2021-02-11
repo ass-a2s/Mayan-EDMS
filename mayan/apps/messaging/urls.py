@@ -1,7 +1,9 @@
 from django.conf.urls import url
 
-#from .api_views import APIMessageListView, APIMessageView
-from .views import MessageCreateView, MessageDeleteView, MessageDetailView, MessageListView
+from .views import (
+    MessageCreateView, MessageDeleteView, MessageDetailView, MessageListView,
+    MessageMarkReadAllView, MessageMarkReadView
+)
 
 
 urlpatterns = [
@@ -25,19 +27,17 @@ urlpatterns = [
         regex=r'^messages/multiple/delete/$',
         name='message_multiple_delete', view=MessageDeleteView.as_view()
     ),
-    #url(
-    #    regex=r'^messages/(?P<message_id>\d+)/edit/$', name='message_edit',
-    #    view=MessageEditView.as_view()
-    #),
+    url(
+        regex=r'^messages/mark_read/$',
+        name='message_multiple_mark_read', view=MessageMarkReadView.as_view()
+    ),
+    url(
+        regex=r'^messages/(?P<message_id>\d+)/mark_read/$',
+        name='message_single_mark_read', view=MessageMarkReadView.as_view()
+    ),
+    url(
+        regex=r'^messages/all/mark_read/$',
+        name='message_all_mark_read',
+        view=MessageMarkReadAllView.as_view()
+    ),
 ]
-
-#api_urls = [
-#    url(
-#        regex=r'^messages/$', name='message-list',
-#        view=APIMessageListView.as_view()
-#    ),
-#    url(
-#        regex=r'^messages/(?P<message_id>[0-9]+)/$', name='message-detail',
-#        view=APIMessageView.as_view()
-#    ),
-#]

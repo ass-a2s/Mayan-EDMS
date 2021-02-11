@@ -2,22 +2,21 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.template import TemplateSyntaxError
 from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
+
+from bleach import Cleaner
+from bleach.linkifier import LinkifyFilter
 
 from mayan.apps.events.classes import EventManagerSave
 from mayan.apps.events.decorators import method_event
 from mayan.apps.templating.classes import Template
 
 from .events import event_message_created, event_message_edited
-#from .managers import MessageManager
 
 
 class Message(models.Model):
-    parent = models.ForeignKey(
-        blank=True, null=True, on_delete=models.CASCADE, to='self',
-        related_name='messages', verbose_name=_('Parent message')
-    )
     sender_content_type = models.ForeignKey(
         blank=True, null=True, on_delete=models.CASCADE, to=ContentType
     )
@@ -48,16 +47,6 @@ class Message(models.Model):
             'Date and time of the message creation.'
         ), verbose_name=_('Creation date and time')
     )
-    #end_datetime = models.DateTimeField(
-    #    blank=True, help_text=_(
-    #        'Date and time until when this message is to be displayed.'
-    #    ), null=True, verbose_name=_('End date time')
-    #)
-
-    #TODO: expiration
-    #TODO: attachments
-
-    #objects = MessageManager()
 
     class Meta:
         ordering = ('-date_time',)
@@ -65,8 +54,6 @@ class Message(models.Model):
         verbose_name_plural = _('Messages')
 
     def __str__(self):
-        #return '{}: {}: {}'.format(self.date_time, self.sender_object, self.subject)
-        #return self.label
         return self.get_label()
 
     def get_absolute_url(self):
@@ -81,6 +68,36 @@ class Message(models.Model):
             context={'instance': self}
         )
     get_label.short_description = _('Label')
+
+    def get_rendered_body(self):
+        if settings.DEBUG:
+            exception_list = (TemplateSyntaxError,)
+        else:
+            exception_list = (Exception, TemplateSyntaxError,)
+
+        cleaner = Cleaner(
+            filters=[LinkifyFilter]
+        )
+        error_message = None
+        result = None
+
+        try:
+            template = Template(
+                template_string=cleaner.clean(text=self.body)
+            )
+            result = template.render(context={'message': self})
+        except exception_list as exception:
+            error_message = _(
+                'Template error; %(exception)s'
+            ) % {
+                'exception': exception
+            }
+
+        return result, error_message
+
+    def mark_read(self):
+        self.read = True
+        self.save()
 
     @method_event(
         event_manager_class=EventManagerSave,

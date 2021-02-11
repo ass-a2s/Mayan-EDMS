@@ -1,30 +1,21 @@
 from django import forms
 from django.utils.translation import ugettext_lazy as _
 
-from mayan.apps.views.forms import DetailForm
-
-from .models import Message
+from mayan.apps.views.widgets import TextAreaDiv
 
 
-class MessageDetailForm(DetailForm):
+class MessageDetailForm(forms.Form):
+    body = forms.CharField(
+        label=_('Body'),
+        widget=TextAreaDiv(
+            attrs={
+                'class': 'views-text-wrap text_area_div full-height',
+                'data-height-difference': 360,
+            }
+        )
+    )
+
     def __init__(self, *args, **kwargs):
-        #message = kwargs['instance']
-
-        extra_fields = [
-            {
-                'label': _('Date and time'),
-                'field': 'date_time',
-                'widget': forms.widgets.DateTimeInput
-            },
-            {'label': _('Sender'), 'field': 'sender_object'},
-            {'field': 'subject'},
-            {'field': 'body'},
-
-        ]
-
-        kwargs['extra_fields'] = extra_fields
+        self.instance = kwargs.pop('instance', None)
         super().__init__(*args, **kwargs)
-
-    class Meta:
-        fields = ()
-        model = Message
+        self.fields['body'].initial = self.instance.body
