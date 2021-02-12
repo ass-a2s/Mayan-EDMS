@@ -33,10 +33,10 @@ link_announcement_edit = Link(
 )
 link_announcement_list = Link(
     condition=get_cascade_condition(
-        app_label='motd', model_name='Announcement',
+        app_label='announcements', model_name='Announcement',
         object_permission=permission_announcement_view,
         view_permission=permission_announcement_create,
     ), icon=icon_announcement_list,
-    text=_('Announcement of the day'),
+    text=_('Announcements'),
     view='announcements:announcement_list'
 )
