@@ -2,122 +2,203 @@ from rest_framework import status
 
 from mayan.apps.rest_api.tests.base import BaseAPITestCase
 
-from ..models import Message
+from ..events import event_announcement_created, event_announcement_edited
+from ..models import Announcement
 from ..permissions import (
-    permission_message_create, permission_message_delete,
-    permission_message_edit, permission_message_view
+    permission_announcement_create, permission_announcement_delete,
+    permission_announcement_edit, permission_announcement_view
 )
 
-from .literals import (
-    TEST_LABEL, TEST_LABEL_EDITED, TEST_MESSAGE, TEST_MESSAGE_EDITED
-)
-from .mixins import MessageAPIViewTestMixin, MessageTestMixin
+from .literals import TEST_ANNOUNCEMENT_LABEL, TEST_ANNOUNCEMENT_TEXT
+from .mixins import AnnouncementAPIViewTestMixin, AnnouncementTestMixin
 
 
-class MessageAPIViewTestCase(
-    MessageAPIViewTestMixin, MessageTestMixin, BaseAPITestCase
+class AnnouncementAPIViewTestCase(
+    AnnouncementAPIViewTestMixin, AnnouncementTestMixin, BaseAPITestCase
 ):
-    def test_message_create_api_view_no_permission(self):
-        response = self._request_message_create_view()
+    _test_event_object_name = 'test_announcement'
+
+    def test_announcement_create_api_view_no_permission(self):
+        self._clear_events()
+
+        response = self._request_announcement_create_view()
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        self.assertEqual(Message.objects.count(), 0)
+        self.assertEqual(Announcement.objects.count(), 0)
 
-    def test_message_create_api_view_with_permission(self):
-        self.grant_permission(permission=permission_message_create)
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
 
-        response = self._request_message_create_view()
+    def test_announcement_create_api_view_with_permission(self):
+        self.grant_permission(permission=permission_announcement_create)
+
+        self._clear_events()
+
+        response = self._request_announcement_create_view()
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
-        message = Message.objects.first()
-        self.assertEqual(response.data['id'], message.pk)
-        self.assertEqual(response.data['label'], TEST_LABEL)
-        self.assertEqual(response.data['message'], TEST_MESSAGE)
+        announcement = Announcement.objects.first()
+        self.assertEqual(response.data['id'], announcement.pk)
+        self.assertEqual(response.data['label'], TEST_ANNOUNCEMENT_LABEL)
+        self.assertEqual(response.data['text'], TEST_ANNOUNCEMENT_TEXT)
 
-        self.assertEqual(Message.objects.count(), 1)
-        self.assertEqual(message.label, TEST_LABEL)
-        self.assertEqual(message.message, TEST_MESSAGE)
+        self.assertEqual(Announcement.objects.count(), 1)
+        self.assertEqual(announcement.label, TEST_ANNOUNCEMENT_LABEL)
+        self.assertEqual(announcement.text, TEST_ANNOUNCEMENT_TEXT)
 
-    def test_message_delete_api_view_no_permission(self):
-        self._create_test_message()
+        event = self._get_test_object_event()
+        self.assertEqual(event.actor, self._test_case_user)
+        self.assertEqual(event.action_object, None)
+        self.assertEqual(event.target, self.test_announcement)
+        self.assertEqual(event.verb, event_announcement_created.id)
 
-        response = self._request_message_delete_view()
+    def test_announcement_delete_api_view_no_permission(self):
+        self._create_test_announcement()
+
+        self._clear_events()
+
+        response = self._request_announcement_delete_view()
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-        self.assertEqual(Message.objects.count(), 1)
+        self.assertEqual(Announcement.objects.count(), 1)
 
-    def test_message_delete_api_view_with_access(self):
-        self._create_test_message()
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
+
+    def test_announcement_delete_api_view_with_access(self):
+        self._create_test_announcement()
         self.grant_access(
-            obj=self.test_message, permission=permission_message_delete
+            obj=self.test_announcement,
+            permission=permission_announcement_delete
         )
 
-        response = self._request_message_delete_view()
+        self._clear_events()
+
+        response = self._request_announcement_delete_view()
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        self.assertEqual(Message.objects.count(), 0)
+        self.assertEqual(Announcement.objects.count(), 0)
 
-    def test_message_detail_api_view_no_permission(self):
-        self._create_test_message()
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
 
-        response = self._request_message_detail_view()
+    def test_announcement_detail_api_view_no_permission(self):
+        self._create_test_announcement()
+
+        self._clear_events()
+
+        response = self._request_announcement_detail_view()
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_message_detail_api_view_with_access(self):
-        self._create_test_message()
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
+
+    def test_announcement_detail_api_view_with_access(self):
+        self._create_test_announcement()
         self.grant_access(
-            obj=self.test_message, permission=permission_message_view
+            obj=self.test_announcement,
+            permission=permission_announcement_view
         )
 
-        response = self._request_message_detail_view()
+        self._clear_events()
+
+        response = self._request_announcement_detail_view()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEqual(response.data['label'], TEST_LABEL)
+        self.assertEqual(response.data['label'], self.test_announcement.label)
 
-    def test_message_edit_api_view_via_patch_view_no_permission(self):
-        self._create_test_message()
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
 
-        response = self._request_message_edit_via_patch_view()
+    def test_announcement_edit_api_view_via_patch_view_no_permission(self):
+        self._create_test_announcement()
+
+        test_announcement_label = self.test_announcement.label
+        test_announcement_text = self.test_announcement.text
+
+        self._clear_events()
+
+        response = self._request_announcement_edit_via_patch_view()
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-        self.test_message.refresh_from_db()
+        self.test_announcement.refresh_from_db()
+        self.assertEqual(
+            self.test_announcement.label, test_announcement_label
+        )
+        self.assertEqual(self.test_announcement.text, test_announcement_text)
 
-        self.assertEqual(self.test_message.label, TEST_LABEL)
-        self.assertEqual(self.test_message.message, TEST_MESSAGE)
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
 
-    def test_message_edit_api_view_via_patch_view_with_access(self):
-        self._create_test_message()
+    def test_announcement_edit_api_view_via_patch_view_with_access(self):
+        self._create_test_announcement()
         self.grant_access(
-            obj=self.test_message, permission=permission_message_edit
+            obj=self.test_announcement, permission=permission_announcement_edit
         )
 
-        response = self._request_message_edit_via_patch_view()
+        test_announcement_label = self.test_announcement.label
+        test_announcement_text = self.test_announcement.text
+
+        self._clear_events()
+
+        response = self._request_announcement_edit_via_patch_view()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.test_message.refresh_from_db()
-        self.assertEqual(self.test_message.label, TEST_LABEL_EDITED)
-        self.assertEqual(self.test_message.message, TEST_MESSAGE_EDITED)
+        self.test_announcement.refresh_from_db()
+        self.assertNotEqual(
+            self.test_announcement.label, test_announcement_label
+        )
+        self.assertNotEqual(self.test_announcement.text, test_announcement_text)
 
-    def test_message_edit_api_view_via_put_view_no_permission(self):
-        self._create_test_message()
+        event = self._get_test_object_event()
+        self.assertEqual(event.actor, self._test_case_user)
+        self.assertEqual(event.action_object, None)
+        self.assertEqual(event.target, self.test_announcement)
+        self.assertEqual(event.verb, event_announcement_edited.id)
 
-        response = self._request_message_edit_via_put_view()
+    def test_announcement_edit_api_view_via_put_view_no_permission(self):
+        self._create_test_announcement()
+
+        test_announcement_label = self.test_announcement.label
+        test_announcement_text = self.test_announcement.text
+
+        self._clear_events()
+
+        response = self._request_announcement_edit_via_put_view()
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-        self.test_message.refresh_from_db()
+        self.test_announcement.refresh_from_db()
+        self.assertEqual(
+            self.test_announcement.label, test_announcement_label
+        )
+        self.assertEqual(self.test_announcement.text, test_announcement_text)
 
-        self.assertEqual(self.test_message.label, TEST_LABEL)
-        self.assertEqual(self.test_message.message, TEST_MESSAGE)
+        event = self._get_test_object_event()
+        self.assertEqual(event, None)
 
-    def test_message_edit_api_view_via_put_view_with_access(self):
-        self._create_test_message()
+    def test_announcement_edit_api_view_via_put_view_with_access(self):
+        self._create_test_announcement()
         self.grant_access(
-            obj=self.test_message, permission=permission_message_edit
+            obj=self.test_announcement, permission=permission_announcement_edit
         )
 
-        response = self._request_message_edit_via_put_view()
+        test_announcement_label = self.test_announcement.label
+        test_announcement_text = self.test_announcement.text
+
+        self._clear_events()
+
+        response = self._request_announcement_edit_via_put_view()
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.test_message.refresh_from_db()
-        self.assertEqual(self.test_message.label, TEST_LABEL_EDITED)
-        self.assertEqual(self.test_message.message, TEST_MESSAGE_EDITED)
+        self.test_announcement.refresh_from_db()
+        self.test_announcement.refresh_from_db()
+        self.assertNotEqual(
+            self.test_announcement.label, test_announcement_label
+        )
+        self.assertNotEqual(self.test_announcement.text, test_announcement_text)
+
+        event = self._get_test_object_event()
+        self.assertEqual(event.actor, self._test_case_user)
+        self.assertEqual(event.action_object, None)
+        self.assertEqual(event.target, self.test_announcement)
+        self.assertEqual(event.verb, event_announcement_edited.id)

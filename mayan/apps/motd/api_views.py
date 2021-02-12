@@ -1,37 +1,47 @@
 from mayan.apps.rest_api import generics
 
-from .models import Message
+from .models import Announcement
 from .permissions import (
-    permission_message_create, permission_message_delete,
-    permission_message_edit, permission_message_view
+    permission_announcement_create, permission_announcement_delete,
+    permission_announcement_edit, permission_announcement_view
 )
-from .serializers import MessageSerializer
+from .serializers import AnnouncementSerializer
 
 
-class APIMessageListView(generics.ListCreateAPIView):
+class APIAnnouncementListView(generics.ListCreateAPIView):
     """
-    get: Returns a list of all the messages.
-    post: Create a new message.
+    get: Returns a list of all the announcements.
+    post: Create a new announcement.
     """
-    mayan_object_permissions = {'GET': (permission_message_view,)}
-    mayan_view_permissions = {'POST': (permission_message_create,)}
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
+    mayan_object_permissions = {'GET': (permission_announcement_view,)}
+    mayan_view_permissions = {'POST': (permission_announcement_create,)}
+    queryset = Announcement.objects.all()
+    serializer_class = AnnouncementSerializer
+
+    def get_instance_extra_data(self):
+        return {
+            '_event_actor': self.request.user
+        }
 
 
-class APIMessageView(generics.RetrieveUpdateDestroyAPIView):
+class APIAnnouncementView(generics.RetrieveUpdateDestroyAPIView):
     """
-    delete: Delete the selected message.
-    get: Return the details of the selected message.
-    patch: Edit the selected message.
-    put: Edit the selected message.
+    delete: Delete the selected announcement.
+    get: Return the details of the selected announcement.
+    patch: Edit the selected announcement.
+    put: Edit the selected announcement.
     """
-    lookup_url_kwarg = 'message_id'
+    lookup_url_kwarg = 'announcement_id'
     mayan_object_permissions = {
-        'DELETE': (permission_message_delete,),
-        'GET': (permission_message_view,),
-        'PATCH': (permission_message_edit,),
-        'PUT': (permission_message_edit,)
+        'DELETE': (permission_announcement_delete,),
+        'GET': (permission_announcement_view,),
+        'PATCH': (permission_announcement_edit,),
+        'PUT': (permission_announcement_edit,)
     }
-    queryset = Message.objects.all()
-    serializer_class = MessageSerializer
+    queryset = Announcement.objects.all()
+    serializer_class = AnnouncementSerializer
+
+    def get_instance_extra_data(self):
+        return {
+            '_event_actor': self.request.user
+        }

@@ -1,18 +1,18 @@
 from rest_framework import serializers
 
-from .models import Message
+from .models import Announcement
 
 
-class MessageSerializer(serializers.HyperlinkedModelSerializer):
+class AnnouncementSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         extra_kwargs = {
             'url': {
-                'lookup_url_kwarg': 'message_id',
-                'view_name': 'rest_api:message-detail'
+                'lookup_url_kwarg': 'announcement_id',
+                'view_name': 'rest_api:announcement-detail'
             }
         }
         fields = (
-            'end_datetime', 'enabled', 'label', 'message', 'start_datetime',
-            'id', 'url'
+            'end_datetime', 'enabled', 'label', 'id', 'start_datetime',
+            'text', 'url'
         )
-        model = Message
+        model = Announcement

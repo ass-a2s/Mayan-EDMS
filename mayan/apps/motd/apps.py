@@ -18,89 +18,92 @@ from mayan.apps.events.permissions import permission_events_view
 from mayan.apps.navigation.classes import SourceColumn
 from mayan.apps.views.html_widgets import TwoStateWidget
 
-from .events import event_message_edited
+from .events import event_announcement_edited
 from .links import (
-    link_message_create, link_message_multiple_delete,
-    link_message_single_delete, link_message_edit, link_message_list
+    link_announcement_create, link_announcement_multiple_delete,
+    link_announcement_single_delete, link_announcement_edit, link_announcement_list
 )
 from .permissions import (
-    permission_message_delete, permission_message_edit,
-    permission_message_view
+    permission_announcement_delete, permission_announcement_edit,
+    permission_announcement_view
 )
 
 logger = logging.getLogger(name=__name__)
 
 
 class MOTDApp(MayanAppConfig):
-    app_namespace = 'motd'
-    app_url = 'messages'
+    app_namespace = 'announcements'
+    app_url = 'announcements'
     has_rest_api = True
     has_tests = True
     name = 'mayan.apps.motd'
-    verbose_name = _('Message of the day')
+    verbose_name = _('Announcements')
 
     def ready(self):
         super().ready()
 
-        Message = self.get_model(model_name='Message')
+        Announcement = self.get_model(model_name='Announcement')
 
-        EventModelRegistry.register(model=Message)
+        EventModelRegistry.register(model=Announcement)
 
         ModelCopy(
-            model=Message, bind_link=True, register_permission=True
+            model=Announcement, bind_link=True, register_permission=True
         ).add_fields(
             field_names=(
-                'label', 'message', 'enabled', 'start_datetime', 'end_datetime'
+                'label', 'text', 'enabled', 'start_datetime', 'end_datetime'
             ),
         )
 
         ModelEventType.register(
-            model=Message, event_types=(event_message_edited,)
+            model=Announcement, event_types=(event_announcement_edited,)
         )
 
         ModelPermission.register(
-            model=Message, permissions=(
+            model=Announcement, permissions=(
                 permission_acl_edit, permission_acl_view,
-                permission_events_view, permission_message_delete,
-                permission_message_edit, permission_message_view
+                permission_events_view, permission_announcement_delete,
+                permission_announcement_edit, permission_announcement_view
             )
         )
         SourceColumn(
             attribute='label', is_identifier=True, is_sortable=True,
-            source=Message
+            source=Announcement
         )
         SourceColumn(
             attribute='enabled', include_label=True, is_sortable=True,
-            source=Message, widget=TwoStateWidget
+            source=Announcement, widget=TwoStateWidget
         )
         SourceColumn(
             attribute='start_datetime', empty_value=_('None'),
-            include_label=True, is_sortable=True, source=Message
+            include_label=True, is_sortable=True, source=Announcement
         )
         SourceColumn(
             attribute='end_datetime', empty_value=_('None'),
-            include_label=True, is_sortable=True, source=Message
+            include_label=True, is_sortable=True, source=Announcement
         )
 
         menu_list_facet.bind_links(
             links=(
                 link_acl_list, link_events_for_object,
                 link_object_event_types_user_subcriptions_list,
-            ), sources=(Message,)
+            ), sources=(Announcement,)
         )
 
         menu_multi_item.bind_links(
-            links=(link_message_multiple_delete,), sources=(Message,)
+            links=(link_announcement_multiple_delete,), sources=(Announcement,)
         )
         menu_object.bind_links(
             links=(
-                link_message_single_delete, link_message_edit
-            ), sources=(Message,)
+                link_announcement_single_delete, link_announcement_edit
+            ), sources=(Announcement,)
         )
         menu_secondary.bind_links(
-            links=(link_message_create,),
-            sources=(Message, 'motd:message_list', 'motd:message_create')
+            links=(link_announcement_create,),
+            sources=(
+                Announcement, 'announcements:announcement_list',
+                'announcements:announcement_create'
+            )
         )
         menu_setup.bind_links(
-            links=(link_message_list,)
+            links=(link_announcement_list,)
         )

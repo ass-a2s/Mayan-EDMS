@@ -1,34 +1,33 @@
 import logging
 
-from django.contrib import messages
 from django.template import RequestContext
 from django.urls import reverse_lazy
-from django.utils.translation import ugettext_lazy as _, ungettext
+from django.utils.translation import ugettext_lazy as _
 
 from mayan.apps.views.generics import (
     MultipleObjectConfirmActionView, SingleObjectCreateView,
     SingleObjectEditView, SingleObjectListView
 )
 
-from .icons import icon_message_list
-from .links import link_message_create
-from .models import Message
+from .icons import icon_announcement_list
+from .links import link_announcement_create
+from .models import Announcement
 from .permissions import (
-    permission_message_create, permission_message_delete,
-    permission_message_edit, permission_message_view
+    permission_announcement_create, permission_announcement_delete,
+    permission_announcement_edit, permission_announcement_view
 )
 
 logger = logging.getLogger(name=__name__)
 
 
-class MessageCreateView(SingleObjectCreateView):
-    fields = ('label', 'message', 'enabled', 'start_datetime', 'end_datetime')
-    model = Message
-    view_permission = permission_message_create
+class AnnouncementCreateView(SingleObjectCreateView):
+    fields = ('label', 'text', 'enabled', 'start_datetime', 'end_datetime')
+    model = Announcement
+    view_permission = permission_announcement_create
 
     def get_extra_context(self):
         return {
-            'title': _('Create message'),
+            'title': _('Create announcement'),
         }
 
     def get_instance_extra_data(self):
@@ -37,63 +36,60 @@ class MessageCreateView(SingleObjectCreateView):
         }
 
 
-class MessageDeleteView(MultipleObjectConfirmActionView):
-    model = Message
-    object_permission = permission_message_delete
-    pk_url_kwarg = 'message_id'
-    post_action_redirect = reverse_lazy(viewname='motd:message_list')
-    success_message = _('Delete request performed on %(count)d message')
-    success_message_plural = _(
-        'Delete request performed on %(count)d messages'
+class AnnouncementDeleteView(MultipleObjectConfirmActionView):
+    error_message = _(
+        'Error deleting announcement "%(instance)s"; %(exception)s'
     )
+    model = Announcement
+    object_permission = permission_announcement_delete
+    pk_url_kwarg = 'announcement_id'
+    post_action_redirect = reverse_lazy(
+        viewname='announcements:announcement_list'
+    )
+    success_message_single = _(
+        'Announcement "%(object)s" deleted successfully.'
+    )
+    success_message_singular = _(
+        '%(count)d announcement deleted successfully.'
+    )
+    success_message_plural = _(
+        '%(count)d announcements deleted successfully.'
+    )
+    title_single = _('Delete announcement: %(object)s.')
+    title_singular = _('Delete the %(count)d selected announcement.')
+    title_plural = _('Delete the %(count)d selected announcement.')
 
     def get_extra_context(self):
-        result = {
+        context = {
             'delete_view': True,
-            'title': ungettext(
-                singular='Delete the selected message?',
-                plural='Delete the selected messages?',
-                number=self.object_list.count()
-            )
         }
 
         if self.object_list.count() == 1:
-            result.update(
+            context.update(
                 {
                     'object': self.object_list.first(),
-                    'title': _('Delete message: %s?') % self.object_list.first()
                 }
             )
 
-        return result
+        return context
 
     def object_action(self, instance, form=None):
-        try:
-            instance.delete()
-            messages.success(
-                message=_(
-                    'Message "%s" deleted successfully.'
-                ) % instance, request=self.request
-            )
-        except Exception as exception:
-            messages.error(
-                message=_('Error deleting message "%(message)s": %(error)s') % {
-                    'message': instance, 'error': exception
-                }, request=self.request
-            )
+        instance.delete()
 
 
-class MessageEditView(SingleObjectEditView):
-    fields = ('label', 'message', 'enabled', 'start_datetime', 'end_datetime')
-    model = Message
-    object_permission = permission_message_edit
-    pk_url_kwarg = 'message_id'
-    post_action_redirect = reverse_lazy(viewname='motd:message_list')
+class AnnouncementEditView(SingleObjectEditView):
+    fields = ('label', 'text', 'enabled', 'start_datetime', 'end_datetime')
+    model = Announcement
+    object_permission = permission_announcement_edit
+    pk_url_kwarg = 'announcement_id'
+    post_action_redirect = reverse_lazy(
+        viewname='announcements:announcement_list'
+    )
 
     def get_extra_context(self):
         return {
             'object': self.object,
-            'title': _('Edit message: %s') % self.object,
+            'title': _('Edit announcement: %s') % self.object,
         }
 
     def get_instance_extra_data(self):
@@ -102,23 +98,23 @@ class MessageEditView(SingleObjectEditView):
         }
 
 
-class MessageListView(SingleObjectListView):
-    model = Message
-    object_permission = permission_message_view
+class AnnouncementListView(SingleObjectListView):
+    model = Announcement
+    object_permission = permission_announcement_view
 
     def get_extra_context(self):
         return {
             'hide_link': True,
             'hide_object': True,
-            'no_results_icon': icon_message_list,
-            'no_results_main_link': link_message_create.resolve(
+            'no_results_icon': icon_announcement_list,
+            'no_results_main_link': link_announcement_create.resolve(
                 context=RequestContext(request=self.request)
             ),
             'no_results_text': _(
-                'Messages are displayed in the login view. You can use '
-                'messages to convery information about your organzation, '
+                'Announcements are displayed in the login view. You can use '
+                'announcements to convery information about your organzation, '
                 'announcements or usage guidelines for your users.'
             ),
-            'no_results_title': _('No messages available'),
-            'title': _('Messages'),
+            'no_results_title': _('No announcements available'),
+            'title': _('Announcements'),
         }

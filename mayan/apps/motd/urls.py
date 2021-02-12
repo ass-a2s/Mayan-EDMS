@@ -1,40 +1,40 @@
 from django.conf.urls import url
 
-from .api_views import APIMessageListView, APIMessageView
+from .api_views import APIAnnouncementListView, APIAnnouncementView
 from .views import (
-    MessageCreateView, MessageDeleteView, MessageEditView, MessageListView
+    AnnouncementCreateView, AnnouncementDeleteView, AnnouncementEditView, AnnouncementListView
 )
 
 urlpatterns = [
     url(
-        regex=r'^messages/$', name='message_list',
-        view=MessageListView.as_view()
+        regex=r'^announcements/$', name='announcement_list',
+        view=AnnouncementListView.as_view()
     ),
     url(
-        regex=r'^messages/create/$', name='message_create',
-        view=MessageCreateView.as_view()
+        regex=r'^announcements/create/$', name='announcement_create',
+        view=AnnouncementCreateView.as_view()
     ),
     url(
-        regex=r'^messages/(?P<message_id>\d+)/delete/$',
-        name='message_single_delete', view=MessageDeleteView.as_view()
+        regex=r'^announcements/(?P<announcement_id>\d+)/delete/$',
+        name='announcement_single_delete', view=AnnouncementDeleteView.as_view()
     ),
     url(
-        regex=r'^messages/multiple/delete/$',
-        name='message_multiple_delete', view=MessageDeleteView.as_view()
+        regex=r'^announcements/multiple/delete/$',
+        name='announcement_multiple_delete', view=AnnouncementDeleteView.as_view()
     ),
     url(
-        regex=r'^messages/(?P<message_id>\d+)/edit/$', name='message_edit',
-        view=MessageEditView.as_view()
+        regex=r'^announcements/(?P<announcement_id>\d+)/edit/$', name='announcement_edit',
+        view=AnnouncementEditView.as_view()
     ),
 ]
 
 api_urls = [
     url(
-        regex=r'^messages/$', name='message-list',
-        view=APIMessageListView.as_view()
+        regex=r'^announcements/$', name='announcement-list',
+        view=APIAnnouncementListView.as_view()
     ),
     url(
-        regex=r'^messages/(?P<message_id>[0-9]+)/$', name='message-detail',
-        view=APIMessageView.as_view()
+        regex=r'^announcements/(?P<announcement_id>[0-9]+)/$', name='announcement-detail',
+        view=APIAnnouncementView.as_view()
     ),
 ]
